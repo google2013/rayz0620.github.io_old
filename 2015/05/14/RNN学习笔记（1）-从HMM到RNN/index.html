@@ -20,7 +20,7 @@
 
 
 
-  <meta name="keywords" content="academic, life," />
+  <meta name="keywords" content="RNN," />
 
 
 
@@ -31,7 +31,7 @@
 
 
 
-  <title> HelloWorld // RayZ's Blog </title>
+  <title> RNN学习笔记（1）-从HMM到RNN // RayZ's Blog </title>
 </head>
 
 <body>
@@ -103,7 +103,7 @@
           
           
             
-              HelloWorld
+              RNN学习笔记（1）-从HMM到RNN
             
           
         </h1>
@@ -111,7 +111,7 @@
 
       <div class="post-meta">
         <span class="post-time">
-          发表于 2015-04-28
+          发表于 2015-05-14
         </span>
 
         
@@ -119,14 +119,6 @@
             &nbsp; | &nbsp; 分类于
             
               <a href="/categories/academic/">academic</a>
-
-              
-              
-                ， 
-              
-
-            
-              <a href="/categories/academic/life/">life</a>
 
               
               
@@ -147,7 +139,9 @@
       
 
       
-        <p>Hello, world. Hello, hexo.</p>
+        <h2 id="前言">前言</h2><p>周一在实验室Semiar上讲了一下关于RNN的基本知识，就想着把讲的内容再整理整理写下来。RNN预计分成两篇博客，这一篇讲RNN从何而来，为何产生，究竟是何物；下一篇讲RNN有何不足，如何改进，去向何方。</p>
+<p>讲Seminar的时候借用了香港中文大学<a href="http://www.ee.cuhk.edu.hk/~xgwang/" target="_blank" rel="external">王小刚教授</a>的Slides，文中部分图片也来自他的Slides，在此表示感谢。各位有兴趣的话可以自己看看，链接在此：<a href="https://piazza.com/cuhk.edu.hk/spring2015/eleg5040/home" target="_blank" rel="external">Slides</a></p>
+<h2 id="序列数据">序列数据</h2><p>RNN是为了对序列数据进行建模而产生的。那么首先，什么是序列数据呢？</p>
 
       
     </div>
@@ -156,7 +150,7 @@
       
         <div class="post-tags">
           
-            <a href="/tags/academic-life/"> #academic, life </a>
+            <a href="/tags/RNN/"> #RNN </a>
           
         </div>
       
@@ -165,11 +159,11 @@
         <div class="post-nav">
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2015/05/14/RNN学习笔记（1）-从HMM到RNN/">RNN学习笔记（1）-从HMM到RNN</a>
-            
           </div>
 
           <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/04/28/HelloWorld/">HelloWorld</a>
             
           </div>
         </div>
@@ -267,7 +261,7 @@
           <div class="post-toc">
             
             
-              <p class="post-toc-empty">此文章未包含目录</p>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#序列数据"><span class="nav-number">2.</span> <span class="nav-text">序列数据</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator"></div>
