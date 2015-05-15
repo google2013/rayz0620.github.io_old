@@ -129,6 +129,13 @@
 
         
           
+            <span class="post-comments-count">
+            &nbsp; | &nbsp;
+            <a href="/2015/05/14/RNN学习笔记（1）-从HMM到RNN/#comments" >
+              <span class="post-comments-count ds-thread-count" data-thread-key="2015/05/14/RNN学习笔记（1）-从HMM到RNN/"></span>
+            </a>
+          </span>
+          
         
       </div>
     </div>
@@ -141,7 +148,19 @@
       
         <h2 id="前言">前言</h2><p>周一在实验室Semiar上讲了一下关于RNN的基本知识，就想着把讲的内容再整理整理写下来。RNN预计分成两篇博客，这一篇讲RNN从何而来，为何产生，究竟是何物；下一篇讲RNN有何不足，如何改进，去向何方。</p>
 <p>讲Seminar的时候借用了香港中文大学<a href="http://www.ee.cuhk.edu.hk/~xgwang/" target="_blank" rel="external">王小刚教授</a>的Slides，文中部分图片也来自他的Slides，在此表示感谢。各位有兴趣的话可以自己看看，链接在此：<a href="https://piazza.com/cuhk.edu.hk/spring2015/eleg5040/home" target="_blank" rel="external">Slides</a></p>
-<h2 id="序列数据">序列数据</h2><p>RNN是为了对序列数据进行建模而产生的。那么首先，什么是序列数据呢？</p>
+<h2 id="序列数据">序列数据</h2><p>RNN是为了对序列数据进行建模而产生的。那么首先，什么是序列数据呢？其实常见的数据类型中，就有很多的序列数据。文本，是字母和词汇的序列；语音，是音节的序列；视频，是图像的序列；气象观测数据，股票交易数据等等，也都是序列数据。</p>
+<p>从数学的角度来讲，先假设我们有这么一个数据样本的集合<span>$X\{x_1, x_2, \ldots, x_N\}$</span><!-- Has MathJax -->. 在一般的不考虑序列的机器学习问题里，我们假设每一个$x_i$都是相互<strong>独立</strong>的。不管他们是不是同分布，他们都是<strong>独立</strong>的, <span>$P(x_i, x_j) = P(x_i) \cdot P(x_j)$</span><!-- Has MathJax -->。</p>
+<p>而序列数据正是将“样本之间相互独立”这一假设改成了“样本之间存在关联”。对样本之间的序列性最简单直接的一种定义是：样本间存在顺序关系，每个样本和它之前的样本存在关联。比如说，在文本中，一个词和它前面的词是有关联的；在气象数据中，一天的气温和前几天的气温是有关联的。一组观察数据定义为一个序列，从分布中可以观察出多个序列。</p>
+<h2 id="Naive的序列模型">Naive的序列模型</h2><p>有了序列性的定义，我们可以开始做一个最简单，最纯粹，最Naive的序列模型了。对于一个序列<span>$X\{x_1, x_2, \ldots, x_N\}$</span><!-- Has MathJax -->，我们把整个序列的联合分布定义为</p>
+<span>$$P(X)=\prod_{i=1}^N{P(x_i|x_1,\ldots,x_{i-1})}$$</span><!-- Has MathJax -->
+<p>也就是说，序列里的每一个元素都和排在它前面的<strong>所有</strong>元素<strong>直接</strong>相关。之所以说这个模型是Naive的，是因为它的复杂度会爆炸性增长。如果序列长度是$N$，<span>$P(x_i|x_1,\ldots,x_{i-1})$</span><!-- Has MathJax -->的模型参数是<span>$O(i)$$</span><!-- Has MathJax -->，连乘起来就是<span>$O(N!)$</span><!-- Has MathJax -->！模型参数随序列长度以阶乘速度增长，这是我们所承受不了的。</p>
+<h2 id="隐马尔科夫模型（HMM）">隐马尔科夫模型（HMM）</h2><p>Naive模型中，模型复杂度随序列长度阶乘增长，复杂度太高。要怎么样减少模型的复杂度呢？Naive模型高复杂度的成因在于，序列中每个元素和它前面的<strong>所有</strong>元素相关。正是这个“<strong>所有</strong>”让它的复杂度爆炸性增长。那么，我们只要限制每个元素只和前面有限个元素关联就好了。一般我们认为，一元素和离它最越近的元素关联性越大。那么我们就定义每个元素只和离它最近的$k$个元素相关就好了，这就是$k$阶马尔科夫模型。现在整个序列的概率分布是这样的：<br><span>$$P(X)=\prod_{i=1}^N{P(x_i|x_{i-1},\ldots,x_{i-(k-1)})}$$</span><!-- Has MathJax --></p>
+<p>$k=1%时，称作1阶马尔科夫模型：<br><span>$$P(X)=\prod_{i=1}^N{P(x_i|x_{i-1})}$$</span><!-- Has MathJax --><br><img src="/img/rnn1/first_order_markov.png" alt="First-Order Markov Model"></p>
+<p>只考虑观察值$X$的模型有时表现力不足，因此需要加入隐变量，将观察值建模成由隐变量所生成。隐变量的好处在于，它的数量可以比观察值多，取值范围可以比观察值更广，能够更好的表达有限的观察值背后的复杂分布。加入了隐变量$h$的马尔科夫模型称为隐马尔科夫模型。<br><span>$$P(x_1, \ldots, x_T, h_1, \ldots, h_T, \theta) = P(h_1) \prod^T_{t=2}{P(h_t|h_{t-1})} \prod^T_{t=1}{(x_t|h_t)}$$</span><!-- Has MathJax --><br><img src="/img/rnn1/hidden_markov.png" alt="Hidden Markov Model"></p>
+<p>隐马尔科夫模型实际上建模的是观察值$x$，隐变量$h$和模型参数$\theta$的联合分布。每个位置$t$的观察值由对应位置的隐变量<span>$h_t$</span><!-- Has MathJax -->生成。$h_t$由上一位置的隐变量<span>$h_{t-1}$</span><!-- Has MathJax -->生成。最初位置的隐变量<span>$h_1$</span><!-- Has MathJax -->由一个先验分布<span>$P(h_1)$</span><!-- Has MathJax -->生成。</p>
+<h2 id="Recurrent_Neural_Network_(RNN)">Recurrent Neural Network (RNN)</h2><p>接下来终于要介绍真正的主角，Recurrent Neural Network(RNN)。RNN一般被翻译成“延时神经网络”，或者“递归神经网络”。个人认为，两种翻译从不同的角度描述了RNN的特性。“延时”偏重于模型的物理意义，而“递归”则反应了模型的数学特性。作为名称来说，前者的区分度较高，后者容易和Recursive Neural Network混淆（虽然两者确实存在关联性）。</p>
+<p>RNN和HMM有些像，区别在于RNN是判别式模型，而且比HMM有更好的可泛化性。<br><img src="/img/rnn1/rnn.png" alt="Recurrent Neural Network"></p>
+<p>(施工中)</p>
 
       
     </div>
@@ -178,6 +197,10 @@
 
     
       <div class="comments" id="comments">
+        
+          <div class="ds-thread" data-thread-key="2015/05/14/RNN学习笔记（1）-从HMM到RNN/"
+               data-title="RNN学习笔记（1）-从HMM到RNN" data-url="http://rayz0620.github.io/2015/05/14/RNN学习笔记（1）-从HMM到RNN/">
+          </div>
         
       </div>
     
@@ -248,6 +271,16 @@
 
         <div class="links-of-author motion-element">
           
+            
+              <span class="links-of-author-item">
+              <a href="https://github.com/rayz0620" target="_blank">Github</a>
+            </span>
+            
+              <span class="links-of-author-item">
+              <a href="http://weibo.com/rayz0620" target="_blank">Weibo</a>
+            </span>
+            
+          
         </div>
 
         
@@ -261,7 +294,7 @@
           <div class="post-toc">
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#序列数据"><span class="nav-number">2.</span> <span class="nav-text">序列数据</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#序列数据"><span class="nav-number">2.</span> <span class="nav-text">序列数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Naive的序列模型"><span class="nav-number">3.</span> <span class="nav-text">Naive的序列模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#隐马尔科夫模型（HMM）"><span class="nav-number">4.</span> <span class="nav-text">隐马尔科夫模型（HMM）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Recurrent_Neural_Network_(RNN)"><span class="nav-number">5.</span> <span class="nav-text">Recurrent Neural Network (RNN)</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator"></div>
@@ -854,14 +887,56 @@
 
   
   
-  
 
   
+    
+  
 
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"rayzblog"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
 
+  
 
 
   
   
-</body>
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script></body>
 </html>
