@@ -146,7 +146,7 @@
       
 
       
-        <h2 id="前言">前言</h2><p>周一在实验室Semiar上讲了一下关于RNN的基本知识，就想着把讲的内容再整理整理写下来。RNN预计分成两篇博客，这一篇讲RNN从何而来，为何产生，究竟是何物；下一篇讲RNN有何不足，如何改进，去向何方。</p>
+        <h2 id="前言">前言</h2><p>周一在实验室Seminar上讲了一下关于RNN的基本知识，就想着把讲的内容再整理整理写下来。RNN预计分成两篇博客，这一篇讲RNN从何而来，为何产生，究竟是何物；下一篇讲RNN有何不足，如何改进，去向何方。</p>
 <p>讲Seminar的时候借用了香港中文大学<a href="http://www.ee.cuhk.edu.hk/~xgwang/" target="_blank" rel="external">王小刚教授</a>的Slides，文中部分图片也来自他的Slides，在此表示感谢。各位有兴趣的话可以自己看看，链接在此：<a href="https://piazza.com/cuhk.edu.hk/spring2015/eleg5040/home" target="_blank" rel="external">Slides</a></p>
 <h2 id="序列数据">序列数据</h2><p>RNN是为了对序列数据进行建模而产生的。那么首先，什么是序列数据呢？其实常见的数据类型中，就有很多的序列数据。文本，是字母和词汇的序列；语音，是音节的序列；视频，是图像的序列；气象观测数据，股票交易数据等等，也都是序列数据。</p>
 <p>从数学的角度来讲，先假设我们有这么一个数据样本的集合<span>$X\{x_1, x_2, \ldots, x_N\}$</span><!-- Has MathJax -->. 在一般的不考虑序列的机器学习问题里，我们假设每一个$x_i$都是相互<strong>独立</strong>的。不管他们是不是同分布，他们都是<strong>独立</strong>的, <span>$P(x_i, x_j) = P(x_i) \cdot P(x_j)$</span><!-- Has MathJax -->。</p>
