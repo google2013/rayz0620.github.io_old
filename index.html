@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="theme-next use-motion ">
+<html class="theme-next use-motion theme-next-mist">
 <head>
   
 
@@ -93,6 +93,97 @@
         <div id="content" class="content">
           
   <div id="posts" class="posts-expand">
+    
+      
+
+  <div class="post post-type-normal ">
+    <div class="post-header">
+
+      
+      
+        <h1 class="post-title">
+          
+          
+            
+              <a class="post-title-link" href="/2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/">
+                论文阅读:《Language Models for Image Captioning: The Quirks and What Works》
+              </a>
+            
+          
+        </h1>
+      
+
+      <div class="post-meta">
+        <span class="post-time">
+          发表于 2015-05-19
+        </span>
+
+        
+          <span class="post-category">
+            &nbsp; | &nbsp; 分类于
+            
+              <a href="/categories/academic/">academic</a>
+
+              
+              
+
+            
+          </span>
+        
+
+        
+          
+            <span class="post-comments-count">
+            &nbsp; | &nbsp;
+            <a href="/2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/#comments" >
+              <span class="post-comments-count ds-thread-count" data-thread-key="2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/"></span>
+            </a>
+          </span>
+          
+        
+      </div>
+    </div>
+
+    <div class="post-body">
+
+      
+      
+
+      
+        
+          直接将CNN Feature输入RNN生成句子，比用CNN预测Bag of Words，再把BOW输入Maximum Entropy模型生成句子更好。RNN倾向于输出和训练样本相似度高的句子，Nearest Neighbor法和RNN的Performance接近。
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          
+      
+    </div>
+
+    <div class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Image-Captioning/"> #Image Captioning </a>
+          
+            <a href="/tags/LSTM/"> #LSTM </a>
+          
+            <a href="/tags/RNN/"> #RNN </a>
+          
+        </div>
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </div>
+  </div>
+
+
     
       
 
@@ -306,7 +397,7 @@
         <div class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">2</span>
+              <span class="site-state-item-count">3</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -320,7 +411,7 @@
 
           <div class="site-state-item site-state-tags">
             <a href="/tags">
-              <span class="site-state-item-count">2</span>
+              <span class="site-state-item-count">4</span>
               <span class="site-state-item-name">标签</span>
               </a>
           </div>
@@ -375,7 +466,7 @@
 <div class="theme-info">
   主题 -
   <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
-    NexT
+    NexT.Mist
   </a>
 </div>
 
@@ -500,6 +591,9 @@
       $.Velocity.RunSequence([
         { e: $('.brand'), p: { opacity: 1 }, o: { duration: 100 } },
         { e: $('.logo'), p: { opacity: 1, top: 0 }, o: { duration: 50} },
+        
+        { e: $('.logo-line-before i'), p: { translateX: "100%" }, o: { duration: 500, sequenceQueue: false } },
+        { e: $('.logo-line-after i'), p: { translateX: "-100%" }, o: { duration: 500, sequenceQueue: false } },
         
         { e: $('.site-title'), p: { opacity: 1, top: 0 }, o: { duration: 200 } }
       ]);

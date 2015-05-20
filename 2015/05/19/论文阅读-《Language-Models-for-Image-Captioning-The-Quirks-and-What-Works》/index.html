@@ -20,7 +20,7 @@
 
 
 
-  <meta name="keywords" content="RNN," />
+  <meta name="keywords" content="Image Captioning,LSTM,RNN," />
 
 
 
@@ -31,7 +31,7 @@
 
 
 
-  <title> RNN学习笔记（1）-从HMM到RNN // RayZ's Blog </title>
+  <title> 论文阅读:《Language Models for Image Captioning: The Quirks and What Works》 // RayZ's Blog </title>
 </head>
 
 <body>
@@ -103,7 +103,7 @@
           
           
             
-              RNN学习笔记（1）-从HMM到RNN
+              论文阅读:《Language Models for Image Captioning: The Quirks and What Works》
             
           
         </h1>
@@ -111,7 +111,7 @@
 
       <div class="post-meta">
         <span class="post-time">
-          发表于 2015-05-14
+          发表于 2015-05-19
         </span>
 
         
@@ -131,8 +131,8 @@
           
             <span class="post-comments-count">
             &nbsp; | &nbsp;
-            <a href="/2015/05/14/RNN学习笔记（1）-从HMM到RNN/#comments" >
-              <span class="post-comments-count ds-thread-count" data-thread-key="2015/05/14/RNN学习笔记（1）-从HMM到RNN/"></span>
+            <a href="/2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/#comments" >
+              <span class="post-comments-count ds-thread-count" data-thread-key="2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/"></span>
             </a>
           </span>
           
@@ -146,26 +146,45 @@
       
 
       
-        <h2 id="前言">前言</h2><p>周一在实验室Seminar上讲了一下关于RNN的基本知识，就想着把讲的内容再整理整理写下来。RNN预计分成三篇讲博客，这一篇简要介绍RNN，它诞生的缘由，它的基本结构和特性。</p>
-<p>讲Seminar的时候借用了香港中文大学<a href="http://www.ee.cuhk.edu.hk/~xgwang/" target="_blank" rel="external">王小刚教授</a>的Slides，文中部分图片也来自他的Slides，在此表示感谢。各位有兴趣的话可以自己看看，链接在此：<a href="https://piazza.com/cuhk.edu.hk/spring2015/eleg5040/home" target="_blank" rel="external">Slides</a></p>
-<h2 id="序列数据">序列数据</h2><p>RNN是为了对序列数据进行建模而产生的。那么首先，什么是序列数据呢？其实常见的数据类型中，就有很多的序列数据。文本，是字母和词汇的序列；语音，是音节的序列；视频，是图像的序列；气象观测数据，股票交易数据等等，也都是序列数据。</p>
-<p>从数学的角度来讲，先假设我们有这么一个数据样本的集合<span>$X\{x_1, x_2, \ldots, x_N\}$</span><!-- Has MathJax -->. 在一般的不考虑序列的机器学习问题里，我们假设每一个$x_i$都是相互<strong>独立</strong>的。不管他们是不是同分布，他们都是<strong>独立</strong>的, <span>$P(x_i, x_j) = P(x_i) \cdot P(x_j)$</span><!-- Has MathJax -->。</p>
-<p>而序列数据正是将“样本之间相互独立”这一假设改成了“样本之间存在关联”。对样本之间的序列性最简单直接的一种定义是：样本间存在顺序关系，每个样本和它之前的样本存在关联。比如说，在文本中，一个词和它前面的词是有关联的；在气象数据中，一天的气温和前几天的气温是有关联的。一组观察数据定义为一个序列，从分布中可以观察出多个序列。</p>
-<h2 id="Naive的序列模型">Naive的序列模型</h2><p>有了序列性的定义，我们可以开始做一个最简单，最纯粹，最Naive的序列模型了。对于一个序列<span>$X\{x_1, x_2, \ldots, x_N\}$</span><!-- Has MathJax -->，我们把整个序列的联合分布定义为</p>
-<span>$$P(X)=\prod_{i=1}^N{P(x_i|x_1,\ldots,x_{i-1})}$$</span><!-- Has MathJax -->
-<p>也就是说，序列里的每一个元素都和排在它前面的<strong>所有</strong>元素<strong>直接</strong>相关。之所以说这个模型是Naive的，是因为它的复杂度会爆炸性增长。如果序列长度是$N$，<span>$P(x_i|x_1,\ldots,x_{i-1})$</span><!-- Has MathJax -->的模型参数是<span>$O(i)$$</span><!-- Has MathJax -->，连乘起来就是<span>$O(N!)$</span><!-- Has MathJax -->！模型参数随序列长度以阶乘速度增长，这是我们所承受不了的。</p>
-<h2 id="隐马尔科夫模型（HMM）">隐马尔科夫模型（HMM）</h2><p>Naive模型中，模型复杂度随序列长度阶乘增长，复杂度太高。要怎么样减少模型的复杂度呢？Naive模型高复杂度的成因在于，序列中每个元素和它前面的<strong>所有</strong>元素相关。正是这个“<strong>所有</strong>”让它的复杂度爆炸性增长。那么，我们只要限制每个元素只和前面有限个元素关联就好了。一般我们认为，一元素和离它最越近的元素关联性越大。那么我们就定义每个元素只和离它最近的$k$个元素相关就好了，这就是$k$阶马尔科夫模型。现在整个序列的概率分布是这样的：<br><span>$$P(X)=\prod_{i=1}^N{P(x_i|x_{i-1},\ldots,x_{i-(k-1)})}$$</span><!-- Has MathJax --></p>
-<p>$k=1%时，称作1阶马尔科夫模型：<br><span>$$P(X)=\prod_{i=1}^N{P(x_i|x_{i-1})}$$</span><!-- Has MathJax --><br><img src="/img/rnn1/first_order_markov.png" alt="First-Order Markov Model"></p>
-<p>只考虑观察值$X$的模型有时表现力不足，因此需要加入隐变量，将观察值建模成由隐变量所生成。隐变量的好处在于，它的数量可以比观察值多，取值范围可以比观察值更广，能够更好的表达有限的观察值背后的复杂分布。加入了隐变量$h$的马尔科夫模型称为隐马尔科夫模型。<br><span>$$P(x_1, \ldots, x_T, h_1, \ldots, h_T, \theta) = P(h_1) \prod^T_{t=2}{P(h_t|h_{t-1})} \prod^T_{t=1}{(x_t|h_t)}$$</span><!-- Has MathJax --><br><img src="/img/rnn1/hidden_markov.png" alt="Hidden Markov Model"></p>
-<p>隐马尔科夫模型实际上建模的是观察值$x$，隐变量$h$和模型参数$\theta$的联合分布。每个位置$t$的观察值由对应位置的隐变量<span>$h_t$</span><!-- Has MathJax -->生成。$h_t$由上一位置的隐变量<span>$h_{t-1}$</span><!-- Has MathJax -->生成。最初位置的隐变量<span>$h_1$</span><!-- Has MathJax -->由一个先验分布<span>$P(h_1)$</span><!-- Has MathJax -->生成。</p>
-<p>注意到，HMM的模型长度$T$是事先固定的，模型参数不共享。也就是说，<span>$h_1$</span><!-- Has MathJax --> 到 <span>$h_2$</span><!-- Has MathJax -->和<span>$h_3$</span><!-- Has MathJax -->到<span>$h_4$</span><!-- Has MathJax -->的变换参数是各自独立的。</p>
-<h2 id="Recurrent_Neural_Network_(RNN)">Recurrent Neural Network (RNN)</h2><p>接下来终于要介绍真正的主角，Recurrent Neural Network(RNN)。RNN一般被翻译成“延时神经网络”，或者“递归神经网络”。个人认为，两种翻译从不同的角度描述了RNN的特性。“延时”偏重于模型的物理意义，而“递归”则反应了模型的数学特性。作为名称来说，前者的区分度较高，后者容易和Recursive Neural Network混淆（虽然两者确实存在关联性）。</p>
-<p><img src="/img/rnn1/rnn.png" alt="Recurrent Neural Network"><br>RNN是深度神经网络模型（DNN）的变种，为了序列建模而诞生。它继承了DNN的线性变换+非线性激活函数的模型结构，并且吸收了HMM模型的有限序列关联的思想。上图中，隐含层$h$有一条和自己连接的边，这条边就是实现“Recurrent”性质的关键。</p>
-<p>为了更好描述RNN的性质，下文中把序列视作时间序列，每一个$t$称作一个“时刻”。$h$的自连接边实际上是和上一时刻的$h$相连。在每一个时刻$t$，<span>$h_t$</span><!-- Has MathJax -->的取值是当前时刻的输入<span>$x_t$</span><!-- Has MathJax -->，和上一时刻的隐含层值<span>$h_{t-1}$</span><!-- Has MathJax -->的一个函数：<br><span>$$h_t = F_{\theta}(h_{t-1}, x_t)$$</span><!-- Has MathJax --></p>
-<p>将$h$层的自连接展开，就成为了上图右边的样子，看上去和HMM很像。两者最大的区别在于，RNN的参数是<strong>跨时刻共享</strong>的。也就是说，对任意时刻$t$，<span>$h_{t-1}$</span><!-- Has MathJax -->到<span>$h_t$</span><!-- Has MathJax -->以及<span>$x_t$</span><!-- Has MathJax -->到<span>$h_t$</span><!-- Has MathJax -->的网络参数都是相同的。共享参数的思想和和卷积神经网络（CNN）是相通的，CNN在二维数据的空间位置之间共享卷积核参数，而RNN则是在序列数据的时刻之间共享参数。</p>
-<p>共享参数使得模型的复杂度大大减少。回顾一下之前提到的两个模型，Naive模型的复杂度是<span>$O(T!)$</span><!-- Has MathJax -->，而HMM的复杂度是<span>$O(T)$</span><!-- Has MathJax -->。RNN在引入了共享参数之后，复杂度和序列长度$T$不再有关联，从$T$的角度看，RNN的复杂度就是<span>$O(1)$</span><!-- Has MathJax -->。复杂度的减少让模型更好训练，不那么容易过拟合。</p>
-<p>共享参数使RNN可以适应任意长度的序列，带来了更好的可推广性。现实中序列数据的长度往往是变化的。如果模型只能适应一种长度的序列，那么对于每一种可能的长度，我们要去单独训练一个模型。这样的训练需要大量的样本，因为我们要为每一种长度准备足够多的样本。这样的模型也不能学到不同长度序列之间的共性。例如，不同长度的句子都是同样的语言，共享同样的语法、语义和上下文相关规律。如果模型不能学到这些，将是很大的损失。RNN能够简单的应用于不同长度的序列，训练和预测都不需要特别的调整，这使得RNN作为一种序列模型具有优势。</p>
-<h2 id="结语">结语</h2><p>这一篇简要介绍了RNN诞生的缘由，它的基本特性。下一篇将仔细介绍如何训练和使用RNN。</p>
+        <p><a href="http://arxiv.org/abs/1505.01809" target="_blank" rel="external">原文地址</a></p>
+<h2 id="简介">简介</h2><p>这篇文章是最近发在Arxiv上的一篇实验和综述性质的文。主要对两类主流的Image Captioning方法（Max Entropy 和RNN）进行了对比实验。作者将这两种方法结合，刷出了<a href="https://www.codalab.org/competitions/3221" target="_blank" rel="external">MSCOCO Image Captioning Challenge</a>上目前最好的Performance。除了比Performance，这篇文章还分析了生成出来的Caption的特点，引出对MSCOCO数据集内部差异性的讨论。</p>
+<h2 id="两类主流Image_Captioning方法">两类主流Image Captioning方法</h2><p>文章分析了目前主流的两类Image Captioning方法，分别是Detection Conditioned法和Activation Conditioned法。两种方法都使用CNN作为图像特征，区别在于它们如何使用CNN特征。这里只简单介绍一下两类方法，详细的大家可以去看原文，我以后也可能会针对具体文章再写。</p>
+<h3 id="Detection_Conditioned">Detection Conditioned</h3><p>Detection Conditioned方法出自出自<a href="http://arxiv.org/abs/1411.4952" target="_blank" rel="external">Maximum Entropy</a>(这篇工作貌似值得一读，下一篇可能写它)。这个方法思路比较特别，我是第一次看到。它把captioning分为两步：</p>
+<ol>
+<li>使用CNN预测一个bag of words（BOW）</li>
+<li>把BOW输入ME语言模型生成一个句子</li>
+</ol>
+<p>第一步可以看做是一个Object Detector，输入图像，对词表中的每个词预测一个概率，选出概率高于阈值$\tau$的词，作为预测出的BOW。每一个词的Detector是单独训练的，比较耗时间，也比较耗数据，算是这个方法的缺点吧。</p>
+<p>第二步中用到的ME语言模型和很多语言模型一样，逐个预测下一个词的条件概率。ME模型的特点在于预测下一个词概率时的条件。它不光以之前生成的词为条件，还以第一步中预测的BOW中<strong>尚未出现在生成句子</strong>中的词为条件。写成公式是这样的：<br><span>$$P(w_{next} \mid w_{previous}, w_{unpredicted})$$</span><!-- Has MathJax --><br>第一步生成的BOW通过<span>$w_{unpredicted}$</span><!-- Has MathJax -->影响句子生成的过程。BOW中的一个词如果已经出现在生成的句子中，就不会再出现在<span>$w_{unpredicted}$</span><!-- Has MathJax -->里。作者认为这样的设计使得模型倾向于覆盖BOW中尽可能多的词，减少了生成句子中的重复。</p>
+<h3 id="Activation_Conditioned">Activation Conditioned</h3><p>使用Activation Conditioned概括来说，就是用CNN生成图像feature(一般是取最后一个全连接层的激活值)，直接作为RNN或者LSTM的初始输入，生成句子，不做额外的object detection.</p>
+<h2 id="性能实验">性能实验</h2><h3 id="句子生成实验">句子生成实验</h3><p>作者实现了五种方法进行对比实验：</p>
+<ol>
+<li>Detection + Maximum Entropy</li>
+<li>Detection + LSTM</li>
+<li>Activation + Gated RNN</li>
+<li>1-Nearest Neighbor</li>
+<li>k-Nearest Neighbor</li>
+</ol>
+<p>其中Gated RNN是RNN的一个变种，可以参考<a href="http://arxiv.org/abs/1501.00299" target="_blank" rel="external">这里</a>。简单来说，Gated RNN就是非线性自连接+逐维系数gating。前者继承自经典RNN，后者貌似是从LSTM吸收来的。总的来说Gated RNN算是介于RNN和LSTM之间的一个东西吧。</p>
+<p>Nearest Neighbor(NN)法有两种。其中1-NN是通过比图像feature，从和query图像$t$最相似的图像中随机取一个caption句子作为生成的句子。k-NN要复杂一些。简单来说，是在$k$个最近邻图像的caption中，寻找最通用的一个句子作为输出。具体来说，先找出和$t$最接近的$k$个图像，这$k$个图像的所有caption集合为$C$。对每个<span>$c_i \in C$</span><!-- Has MathJax -->，计算它和其他所有$c$的相似度，取相似度最大的一个<span>$c_i$</span><!-- Has MathJax -->作为生成句子。</p>
+<p>对比实验结果见表1：<br><img src="/img/lm_for_ic/generation_performance.png" alt="Generation Performance"></p>
+<p>对比实验用了三个指标：Perplexity(越低越好)，BLEU(越高越好)，METEOR(越高越好)。<a href="http://www.cs.cmu.edu/~alavie/METEOR/" target="_blank" rel="external">METEOR</a>是2014年提出的一个新的机器翻译评价指标。METEOR的特点是考虑了语言内部的先验知识，包括同义、词根词缀、释义(paraphasing)，并且能从数据中学出这些知识。经典的评价指标，比如BLEU，只考虑机器输出句子和人工提出的参考翻译之间的<em>字面</em>相似性，而忽略了自然语言中常见的同义(不同词同义)、同根(词根相同但词缀不同)、释义(语句/词对语句/词)等现象。</p>
+<p>结果中令人惊讶的是，k-Nearest Neighbor法的结果并不差。在强调字面相似性的BLEU分数上，kNN取得了最好的成绩。在综合性较强的METEOR分数上，kNN只比最好的低0.3%，差距非常小。</p>
+<h3 id="Re-Ranking实验">Re-Ranking实验</h3><p>这篇文章还做了另一类实验，探讨多种模型结合的效果。实验方法是这样的：对每个query，先用一种模型生成500个似然性最高的候选句子，再用另外的模型对500个候选句子重新排序(re-rank)，选出最好的一个作为输出。实际上，作者以Maximum Entropy法作为基本方法，加入其他方法进行比较。结果如下表2：</p>
+<p><img src="/img/lm_for_ic/re_ranking_table.png" alt="Re-ranking Performance"></p>
+<p>结论是，结合多种方法做re-ranking，比只用一种方法要好。</p>
+<h2 id="生成句子的分析">生成句子的分析</h2><p>除了使用定量标准分析模型的性能，作者还从语言的角度对生成的句子进行了分析。这是其他工作中很少见的，分析的结果也有一定的启示意义。</p>
+<h3 id="语言错误和模型表达能力">语言错误和模型表达能力</h3><p>作者总结了Maximum Entropy(ME)和Gated RNN(GRNN)模型生成句子的一些常见错误：</p>
+<p><img src="/img/lm_for_ic/example_error_table.png" alt="Example Errors"></p>
+<p>表中前三行的句子里，ME模型生成的句子存在错误的指代关系(anaphora)，句末的”on top of it”短语中的”it”在前文并没有正确的指代对象。GRNN模型则能够正确地使用”on top of it”这个词组，”it”都有正确的指代对象。作者认为ME模型出现这种错误的原因在于ME模型的上下文窗口太小，没有捕捉到足够远的上文信息。我认为这个结论有些不准确。根据ME法的<a href="http://arxiv.org/abs/1411.4952" target="_blank" rel="external">原文</a>，ME模型在预测下一个词的时候是以已经预测出的<em>所有</em>词为条件。也就是说，上下文窗口是够大的。ME模型的问题，更准确地说应该是它没有学习”on top of it”背后的”指代关系”。它只学到了”on top of it”在句尾出现的概率很高。</p>
+<p>再看表5的后两行，GRNN模型生成的句子存在词语重复的问题。ME模型显式地跟踪哪些词语已经被生成，并且鼓励模型输出未生成词。然而GRNN隐式地用隐含层保存之前生成的词语信息，没有显式的约束。直观地说RNN认为输出一个物体后很可能接着输出”and”，下一个时刻遇到”and”的时候认为应该输出一个物体的词，而并不能区分两个物体其实是一回事。</p>
+<h3 id="重复的句子与不够多样的数据">重复的句子与不够多样的数据</h3><p>作者对各种方法生成句子的重复度进行了分析，并且和人工标注进行了对比：<br><img src="/img/lm_for_ic/repeated_caption_table.png" alt="Repeated Caption"></p>
+<p>看表格可以看出来，人工标注的句子极少有重复的(只有0.6%)，和训练集的句子重复的也很少。然而在机器生成的句子中，在不同图像之间重复的句子，以及和训练集里一模一样的句子相当多，“原创”的句子比较少。从这个角度看，机器生成的句子似乎并不靠谱。这引出了两个问题：</p>
+<ol>
+<li>模型的训练和评价过程是否存在问题？</li>
+<li>训练的数据是否欠缺多样性？</li>
+</ol>
+<h2 id="结论">结论</h2><p>我个人的见解是，生成的句子趋同，表示训练出的模型可能存在过拟合的问题。过拟合的根本原因，在于训练数据的多样性不够。数据集里的图像内容本身就非常趋同，标注出的句子也就趋同。随着数据收集工作的继续进行，数据的量和多样性上去了，这个问题会缓解。另一个问题在于评测标准。虽然自动化评测的方法也在进步(比如METEOR)，但毕竟还比不上人的判断。既然我们能用各种众包平台(Amazon MTurk之类的)来做数据标注，也就可以用它来做评测。如果能建立起标准化的人工评测方法，结合自动化评测，应该能够更好地对Image Captioning的性能进行评测。</p>
 
       
     </div>
@@ -173,6 +192,10 @@
     <div class="post-footer">
       
         <div class="post-tags">
+          
+            <a href="/tags/Image-Captioning/"> #Image Captioning </a>
+          
+            <a href="/tags/LSTM/"> #LSTM </a>
           
             <a href="/tags/RNN/"> #RNN </a>
           
@@ -183,13 +206,11 @@
         <div class="post-nav">
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/">论文阅读:《Language Models for Image Captioning: The Quirks and What Works》</a>
-            
           </div>
 
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2015/04/28/HelloWorld/">HelloWorld</a>
+              <a href="/2015/05/14/RNN学习笔记（1）-从HMM到RNN/">RNN学习笔记（1）-从HMM到RNN</a>
             
           </div>
         </div>
@@ -205,8 +226,8 @@
     
       <div class="comments" id="comments">
         
-          <div class="ds-thread" data-thread-key="2015/05/14/RNN学习笔记（1）-从HMM到RNN/"
-               data-title="RNN学习笔记（1）-从HMM到RNN" data-url="http://rayz0620.github.io/2015/05/14/RNN学习笔记（1）-从HMM到RNN/">
+          <div class="ds-thread" data-thread-key="2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/"
+               data-title="论文阅读:《Language Models for Image Captioning: The Quirks and What Works》" data-url="http://rayz0620.github.io/2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/">
           </div>
         
       </div>
@@ -301,7 +322,7 @@
           <div class="post-toc">
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#序列数据"><span class="nav-number">2.</span> <span class="nav-text">序列数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Naive的序列模型"><span class="nav-number">3.</span> <span class="nav-text">Naive的序列模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#隐马尔科夫模型（HMM）"><span class="nav-number">4.</span> <span class="nav-text">隐马尔科夫模型（HMM）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Recurrent_Neural_Network_(RNN)"><span class="nav-number">5.</span> <span class="nav-text">Recurrent Neural Network (RNN)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结语"><span class="nav-number">6.</span> <span class="nav-text">结语</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简介"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#两类主流Image_Captioning方法"><span class="nav-number">2.</span> <span class="nav-text">两类主流Image Captioning方法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Detection_Conditioned"><span class="nav-number">2.1.</span> <span class="nav-text">Detection Conditioned</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Activation_Conditioned"><span class="nav-number">2.2.</span> <span class="nav-text">Activation Conditioned</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#性能实验"><span class="nav-number">3.</span> <span class="nav-text">性能实验</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#句子生成实验"><span class="nav-number">3.1.</span> <span class="nav-text">句子生成实验</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Re-Ranking实验"><span class="nav-number">3.2.</span> <span class="nav-text">Re-Ranking实验</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#生成句子的分析"><span class="nav-number">4.</span> <span class="nav-text">生成句子的分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#语言错误和模型表达能力"><span class="nav-number">4.1.</span> <span class="nav-text">语言错误和模型表达能力</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#重复的句子与不够多样的数据"><span class="nav-number">4.2.</span> <span class="nav-text">重复的句子与不够多样的数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#结论"><span class="nav-number">5.</span> <span class="nav-text">结论</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator"></div>
