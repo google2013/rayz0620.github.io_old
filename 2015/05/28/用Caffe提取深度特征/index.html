@@ -20,7 +20,7 @@
 
 
 
-  <meta name="keywords" content="caffe,lmdb," />
+  <meta name="keywords" content="Hexo,next" />
 
 
 
@@ -31,7 +31,7 @@
 
 
 
-  <title> Caffe中LMDB的使用 // RayZ's Blog </title>
+  <title> 用Caffe提取深度特征 // RayZ's Blog </title>
 </head>
 
 <body>
@@ -103,7 +103,7 @@
           
           
             
-              Caffe中LMDB的使用
+              用Caffe提取深度特征
             
           
         </h1>
@@ -111,28 +111,17 @@
 
       <div class="post-meta">
         <span class="post-time">
-          发表于 2015-05-25
+          发表于 2015-05-28
         </span>
 
-        
-          <span class="post-category">
-            &nbsp; | &nbsp; 分类于
-            
-              <a href="/categories/academic/">academic</a>
-
-              
-              
-
-            
-          </span>
         
 
         
           
             <span class="post-comments-count">
             &nbsp; | &nbsp;
-            <a href="/2015/05/25/Caffe中LMDB的使用/#comments" >
-              <span class="post-comments-count ds-thread-count" data-thread-key="2015/05/25/Caffe中LMDB的使用/"></span>
+            <a href="/2015/05/28/用Caffe提取深度特征/#comments" >
+              <span class="post-comments-count ds-thread-count" data-thread-key="2015/05/28/用Caffe提取深度特征/"></span>
             </a>
           </span>
           
@@ -146,57 +135,67 @@
       
 
       
-        <p>最近做实验，要用Caffe提取CNN特征。官方的<code>extract_feature.bin</code>很好用，但是输出的特征是放在LMDB里的。以前嫌LMDB麻烦，一直都图方便直接用<code>ImageDataLayer</code>来读原始图像。这次绕不过去了，就顺便研究了一下Caffe对LMDB的使用，一些心得写下来和大家分享一下。提取特征的内容下一篇再写。</p>
-<p>Caffe中DataLayer默认的数据格式是LMDB。许多example中提供的输入数据是LMDB格式。使用extract_features.bin提取特征时支持的输出格式之一也是LMDB。LMDB在Caffe的IO功能中有相当重要的地位。因此，搞明白如何存取Caffe的LMDB数据，对于我们使用Caffe是很有帮助的。</p>
-<h2 id="LMDB">LMDB</h2><p>Caffe使用LMDB来存放训练/测试用的数据集，以及使用网络提取出的feature（为了方便，以下还是统称数据集）。数据集的结构很简单，就是大量的矩阵/向量数据平铺开来。数据之间没有什么关联，数据内没有复杂的对象结构，就是向量和矩阵。既然数据并不复杂，Caffe就选择了LMDB这个简单的数据库来存放数据。</p>
-<p>LMDB的全称是<strong>Lightning Memory-Mapped Database</strong>，闪电般的内存映射数据库。它文件结构简单，一个文件夹，里面一个数据文件，一个锁文件。数据随意复制，随意传输。它的访问简单，不需要运行单独的数据库管理进程，只要在访问数据的代码里引用LMDB库，访问时给文件路径即可。</p>
-<p>图像数据集归根究底从图像文件而来。既然有ImageDataLayer可以直接读取图像文件，为什么还要用数据库来放数据集，增加读写的麻烦呢？我认为，Caffe引入数据库存放数据集，是为了减少IO开销。读取大量小文件的开销是非常大的，尤其是在机械硬盘上。LMDB的整个数据库放在一个文件里，避免了文件系统寻址的开销。LMDB使用内存映射的方式访问文件，使得文件内寻址的开销非常小，使用指针运算就能实现。数据库单文件还能减少数据集复制/传输过程的开销。一个几万，几十万文件的数据集，不管是直接复制，还是打包再解包，过程都无比漫长而痛苦。LMDB数据库只有一个文件，你的介质有多块，就能复制多快，不会因为文件多而慢如蜗牛。</p>
-<h2 id="Caffe中的LMDB数据">Caffe中的LMDB数据</h2><p>接下来要介绍Caffe是如何使用LMDB存放数据的。<br>Caffe中的LMDB数据大约有两类：一类是输入<code>DataLayer</code>的训练/测试数据集；另一类则是<code>extract_feature</code>输出的特征数据。</p>
-<h3 id="Datum数据结构">Datum数据结构</h3><p>首先需要注意的是，Caffe并不是把向量和矩阵直接放进数据库的，而是将数据通过<a href="https://github.com/BVLC/caffe/blob/master/src/caffe/proto/caffe.proto" target="_blank" rel="external">caffe.proto</a>里定义的一个<code>datum</code>类来封装。数据库里放的是一个个的<code>datum</code>序列化成的字符串。Datum的定义摘录如下：<br><figure class="highlight protobuf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">message</span> <span class="title">Datum</span> </span>&#123;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> channels = <span class="number">1</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> height = <span class="number">2</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> width = <span class="number">3</span>;</span><br><span class="line">  <span class="comment">// the actual image data, in bytes</span></span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">bytes</span> data = <span class="number">4</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> label = <span class="number">5</span>;</span><br><span class="line">  <span class="comment">// Optionally, the datum could also hold float data.</span></span><br><span class="line">  <span class="keyword">repeated</span> <span class="built_in">float</span> float_data = <span class="number">6</span>;</span><br><span class="line">  <span class="comment">// If true data contains an encoded image that need to be decoded</span></span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">bool</span> encoded = <span class="number">7</span> [default = <span class="literal">false</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>一个Datum有三个维度，<code>channels</code>, <code>height</code>,和<code>width</code>，可以看做是少了num维度的<code>Blob</code>。存放数据的地方有两个：<code>byte_data</code>和<code>float_data</code>，分别存放整数型和浮点型数据。图像数据一般是整形，放在<code>byte_data</code>里，特征向量一般是浮点型，放在<code>float_data</code>里。<code>label</code>存放数据的类别标签，是整数型。<code>encoded</code>标识数据是否需要被解码（里面有可能放的是JPEG或者PNG之类经过编码的数据）。</p>
-<p>Datum这个数据结构将数据和标签封装在一起，兼容整形和浮点型数据。经过Protobuf编译后，可以在Python和C++中都提供高效的访问。同时Protubuf还为它提供了序列化与反序列化的功能。存放进LMDB的就是<code>Datum</code>序列化生成的字符串。</p>
-<h3 id="Caffe中读写LMDB的代码">Caffe中读写LMDB的代码</h3><p>要想知道Caffe是如何使用LMDB的，最好的方法当然是去看Caffe的代码。Caffe中关于LMDB的代码有三类：生成数据集、读取数据集、生成特征向量。接下来就分别针对三者进行分析。</p>
-<h4 id="生成数据集">生成数据集</h4><p>生成数据集的代码在examples，随数据集提供，比如<a href="https://github.com/BVLC/caffe/blob/master/examples/mnist/convert_mnist_data.cpp" target="_blank" rel="external">MNIST</a>。</p>
-<p>首先，创建访问LMDB所需的一些变量：<br><figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">MDB_env <span class="keyword">*</span>mdb_env;</span><br><span class="line">MDB_dbi mdb_dbi;</span><br><span class="line">MDB_val mdb_key, mdb_data;</span><br><span class="line">MDB_txn <span class="keyword">*</span>mdb_txn;</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p>
-<p><code>mdb_env</code>是整个数据库环境的句柄，<code>mdb_dbi</code>是环境中一个数据库的句柄，<code>mdb_key</code>和<code>mdb_data</code>用来存放向数据库中输入数据的“值”。<code>mdb_txn</code>是数据库事物操作的句柄，”txn”是”transaction”的缩写。</p>
-<p>然后，创建数据库环境，创建并打开数据库：<br><figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (db_backend <span class="subst">==</span> <span class="string">"lmdb"</span>) &#123;  <span class="comment">// lmdb</span></span><br><span class="line">  <span class="keyword">LOG</span>(INFO) <span class="subst">&lt;&lt;</span> <span class="string">"Opening lmdb "</span> <span class="subst">&lt;&lt;</span> db_path;</span><br><span class="line">  CHECK_EQ(mkdir(db_path, <span class="number">0744</span>), <span class="number">0</span>)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mkdir "</span> <span class="subst">&lt;&lt;</span> db_path <span class="subst">&lt;&lt;</span> <span class="string">"failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_env_create(<span class="subst">&amp;</span>mdb_env), MDB_SUCCESS) <span class="subst">&lt;&lt;</span> <span class="string">"mdb_env_create failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_env_set_mapsize(mdb_env, <span class="number">1099511627776</span>), MDB_SUCCESS)  <span class="comment">// 1TB</span></span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_env_set_mapsize failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_env_open(mdb_env, db_path, <span class="number">0</span>, <span class="number">0664</span>), MDB_SUCCESS)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_env_open failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_txn_begin(mdb_env, <span class="built_in">NULL</span>, <span class="number">0</span>, <span class="subst">&amp;</span>mdb_txn), MDB_SUCCESS)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_txn_begin failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_open(mdb_txn, <span class="built_in">NULL</span>, <span class="number">0</span>, <span class="subst">&amp;</span>mdb_dbi), MDB_SUCCESS)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_open failed. Does the lmdb already exist? "</span>;</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="keyword">LOG</span>(FATAL) <span class="subst">&lt;&lt;</span> <span class="string">"Unknown db backend "</span> <span class="subst">&lt;&lt;</span> db_backend;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>第3行代码为数据库创建文件夹，如果文件夹已经存在，程序会报错退出。也就是说，程序不会覆盖已有的数据库。已有的数据库如果不要了，需要手动删除。第13行处创建并打开了一个数据库。需要注意的是，LMDB的一个环境中是可以有多个数据库的，数据库之间以名字区分。<code>mdb_open()</code>的第二个参数实际上就是数据库的名称(<code>char *</code>)。当一个环境中只有一个数据库的时候，这个参数可以给<code>NULL</code>。</p>
-<p>最后，为每一个图像创建<code>Datum</code>对象，向对象内写入数据，然后将其序列化成字符串，将字符串放入数据库中：<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">Datum datum;</span><br><span class="line">datum.set_channels(<span class="number">1</span>);</span><br><span class="line">datum.set_height(rows);</span><br><span class="line">datum.set_width(cols);</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> item_id = <span class="number">0</span>; item_id &lt; num_items; ++item_id) &#123;</span><br><span class="line">  image_file.read(pixels, rows * cols);</span><br><span class="line">  label_file.read(&amp;label, <span class="number">1</span>);</span><br><span class="line">  datum.set_data(pixels, rows*cols);</span><br><span class="line">  datum.set_label(label);</span><br><span class="line">  <span class="built_in">snprintf</span>(key_cstr, kMaxKeyLength, <span class="string">"%08d"</span>, item_id);</span><br><span class="line">  datum.SerializeToString(&amp;value);</span><br><span class="line">  <span class="function"><span class="built_in">string</span> <span class="title">keystr</span><span class="params">(key_cstr)</span></span>;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Put in db</span></span><br><span class="line">  <span class="keyword">if</span> (db_backend == <span class="string">"lmdb"</span>) &#123;  <span class="comment">// lmdb</span></span><br><span class="line">    mdb_data.mv_size = value.size();</span><br><span class="line">    mdb_data.mv_data = <span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">void</span>*&gt;(&amp;value[<span class="number">0</span>]);</span><br><span class="line">    mdb_key.mv_size = keystr.size();</span><br><span class="line">    mdb_key.mv_data = <span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">void</span>*&gt;(&amp;keystr[<span class="number">0</span>]);</span><br><span class="line">    CHECK_EQ(mdb_put(mdb_txn, mdb_dbi, &amp;mdb_key, &amp;mdb_data, <span class="number">0</span>), MDB_SUCCESS)</span><br><span class="line">        &lt;&lt; <span class="string">"mdb_put failed"</span>;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    LOG(FATAL) &lt;&lt; <span class="string">"Unknown db backend "</span> &lt;&lt; db_backend;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (++count % <span class="number">1000</span> == <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// Commit txn</span></span><br><span class="line">    <span class="keyword">if</span> (db_backend == <span class="string">"lmdb"</span>) &#123;  <span class="comment">// lmdb</span></span><br><span class="line">      CHECK_EQ(mdb_txn_commit(mdb_txn), MDB_SUCCESS)</span><br><span class="line">          &lt;&lt; <span class="string">"mdb_txn_commit failed"</span>;</span><br><span class="line">      CHECK_EQ(mdb_txn_begin(mdb_env, NULL, <span class="number">0</span>, &amp;mdb_txn), MDB_SUCCESS)</span><br><span class="line">          &lt;&lt; <span class="string">"mdb_txn_begin failed"</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      LOG(FATAL) &lt;&lt; <span class="string">"Unknown db backend "</span> &lt;&lt; db_backend;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>放入数据的Key是图像的编号，前面补0至8位。需要注意的是18至21行，<code>MDB_val</code>类型的<code>mdb_data</code>和<code>mdb_key</code>中存放的是数据来源的指针，以及数据的长度。第20行的<code>mdb_put()</code>函数将数据存入数据库。每隔1000个图像commit一次数据库。只有commit之后，数据才真正写入磁盘。</p>
-<h4 id="读取数据集">读取数据集</h4><p>Caffe中读取LMDB数据集的代码是<a href="https://github.com/BVLC/caffe/blob/master/src/caffe/layers/data_layer.cpp" target="_blank" rel="external"><code>DataLayer</code></a>，用在网络的最下层，提供数据。<code>DataLayer</code>采用顺序遍历的方式读取数据，不支持打乱数据顺序，只能随机跳过前若干个数据。</p>
-<p>首先，在<code>DataLayer</code>的<code>DataLayerSetUp</code>方法中，打开数据库，并获取迭代器<code>cursor_</code>：<br><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">db_</span><span class="class">.reset</span>(<span class="rule"><span class="attribute">db</span>:<span class="value">:<span class="function">GetDB</span>(this-&gt;layer_param_.<span class="function">data_param</span>().<span class="function">backend</span>()))</span></span>;</span><br><span class="line"><span class="tag">db_-</span>&gt;<span class="tag">Open</span>(<span class="tag">this-</span>&gt;<span class="tag">layer_param_</span><span class="class">.data_param</span>()<span class="class">.source</span>(), <span class="rule"><span class="attribute">db</span>:<span class="value">:READ)</span></span>;</span><br><span class="line"><span class="tag">cursor_</span><span class="class">.reset</span>(<span class="tag">db_-</span>&gt;<span class="tag">NewCursor</span>());</span><br></pre></td></tr></table></figure></p>
-<p>然后，在每一次的数据预取时，<code>InternalThreadEntry()</code>方法中，从数据库中读取字符串，反序列化为Datum对象，再从Datum对象中取出数据：</p>
-<figure class="highlight ocaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Datum</span> datum;</span><br><span class="line">datum.<span class="type">ParseFromString</span>(cursor_-&gt;<span class="keyword">value</span><span class="literal">()</span>);</span><br></pre></td></tr></table></figure>
-<p>其中，<code>cursor_-&gt;value()</code>获取序列化后的字符串。<code>datum.ParseFromString()</code>方法对字符串进行反序列化。</p>
-<p>最后，要将<code>cursor_</code>向前推进：<br><figure class="highlight ocaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cursor_-&gt;<span class="type">Next</span><span class="literal">()</span>;</span><br><span class="line"><span class="keyword">if</span> (!cursor_-&gt;valid<span class="literal">()</span>) &#123;</span><br><span class="line">  <span class="type">DLOG</span>(<span class="type">INFO</span>) &lt;&lt; <span class="string">"Restarting data prefetching from start."</span></span><br><span class="line">      cursor_-&gt;<span class="type">SeekToFirst</span><span class="literal">()</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>如果<code>cursor-&gt;valid()</code>返回false，说明数据库已经遍历到头，这时需要将<code>cursor_</code>重置回数据库开头。</p>
-<p>不支持样本随机排序应该是<code>DataLayer</code>的致命弱点。如果数据库的key能够统一，其实可以通过对key随机枚举的方式实现。</p>
+        <p>最近做对比实验，要比较非深度的方法加上deep feature之后的效果。于是就用Caffe提了一把特征，过程不困难但是有点繁琐，姑且记录下来，留个参考。</p>
+<h1 id="准备工作">准备工作</h1><p>用Caffe提取深度特征，需要以下几样东西：</p>
+<ul>
+<li>能够运行的Caffe环境</li>
+<li>提取特征的深度网络定义(prototxt)</li>
+<li>这个网络的参数(caffemodel)</li>
+<li>需要提取特征的数据</li>
+</ul>
+<p>配好环境是必须的，不用多说。网络定义和网络参数，可以用自己学的网络，也可以用公开发表的经典网络，比如AlexNet, VGG之类的。Caffe官网提供了一些经典网络，可以参考<a href="">这里</a>。被提特征的数据需要处理成能被<code>DataLayer</code>或者<code>ImageDatalayer</code>读取的格式。</p>
+<h1 id="提取特征">提取特征</h1><p>做好准备工作之后，就运行<code>build/tools/feature_extraction.bin</code>提取特征，命令行参数如下：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">extract_features pretrained_net_param  feature_extraction_proto_file \&#10;extract_feature_blob_name1[,name2,...]  save_feature_dataset_name1[,name2,...] \&#10;num_mini_batches  db_type  [CPU/GPU] [DEVICE_ID=0]</span><br></pre></td></tr></table></figure></p>
+<p>参数1是模型参数（.caffemodel）文件的路径。</p>
+<p>参数2是描述网络结构的prototxt文件。程序会从参数1的caffemodel文件里找对应名称的layer读取参数。</p>
+<p>参数3是需要提取的blob名称，对应网络结构prototxt里的名称。blob名称可以有多个，用逗号分隔。每个blob提取出的特征会分开保存。</p>
+<p>参数4是保存提取出来的特征的数据库路径，可以有多个，和参数3中一一对应，以逗号分隔。如果用LMDB的话，路径必须是不存在的（已经存在的话要改名或者删除）。</p>
+<p>参数5是提取特征所需要执行的batch数量。这个数值和prototxt里DataLayer中的Caffe的DataLayer(或者ImageDataLayer)中的batch_size参数相乘，就是会被输入网络的总样本数。设置参数时需要确保<code>batch_size * num_mini_batches</code>等于需要提取特征的样本总数，否则提取的特征就会不够数或者是多了。</p>
+<p>参数6是保存特征使用的数据库类型，支持lmdb和leveldb两种(小写)。推荐使用lmdb，因为lmdb的访问速度更快，还支持多进程同时读取。</p>
+<p>参数7决定使用GPU还是CPU，直接写对应的三个大写字母就行。省略不写的话默认是CPU。</p>
+<p>参数8决定使用哪个GPU，在多GPU的机器上跑的时候需要指定。省略不写的话默认使用0号GPU。</p>
+<h1 id="读取和转换">读取和转换</h1><p>使用<code>extract_feature.bin</code>提取的特征是保存在数据库里的。在使用特征时需要读取数据库。这里介绍如何在Python环境中读取LMDB中的特征数据。</p>
+<p>首先，需要安装Python的LMDB接口库：<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install lmdb</span><br></pre></td></tr></table></figure></p>
+<p>需要管理员权限安装的在命令前加<code>sudo</code>。</p>
+<p>然后需要编译caffe.proto的Python版，我们需要它来访问Datum这个数据结构。跟随<a href="http://caffe.berkeleyvision.org/installation.html" target="_blank" rel="external">官方教程</a>配置好Python环境，运行<code>make pycaffe</code>编译成功的话，<code>$CAFFE_ROOT/python/</code>目录里就会有编译好的代码。</p>
+<p>安装好LMDB库和之后，在代码中引用该库：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> lmdb</span><br><span class="line"><span class="keyword">from</span> caffe.proto <span class="keyword">import</span> caffe_pb2</span><br></pre></td></tr></table></figure></p>
+<p>打开LMDB数据库：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">fea_lmdb = lmdb.open(lmdb_name) <span class="comment">#打开数据库</span></span><br><span class="line">txn = img_lmdb.begin()	<span class="comment">#获取transaction对象</span></span><br></pre></td></tr></table></figure></p>
+<p><code>extract_feature.bin</code>在保存数据的时候，以从0开始递增的整数作为数据库条目的key。按照key的顺序遍历数据库：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> idx <span class="keyword">in</span> xrange(feature_num): </span><br><span class="line">    value = txn.get(str(idx)) <span class="comment">#获取Datum序列化成的字符串，注意key要转换为字符串</span></span><br><span class="line">    datum = caffe_pb2.Datum() <span class="comment">#创建Datum对象</span></span><br><span class="line">    datum.ParseFromString(value) <span class="comment">#从字符串中反序列化Datum对象</span></span><br></pre></td></tr></table></figure></p>
+<p>需要注意的是，数据库中的key固定是字符串格式，所以要先转换。数据库里的value是Datum对象序列化成的字符串，用<code>ParseFromString()</code>方法进行反序列化。</p>
+<p>caffe.proto中对Datum类的定义如下。<code>data</code>和<code>float_data</code>分别保存字节型和浮点型的数据，<code>channels</code>,<code>height</code>,<code>width</code>描述了数据的维度与形状。<br><figure class="highlight protobuf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">message</span> <span class="title">Datum</span> </span>&#123;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> channels = <span class="number">1</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> height = <span class="number">2</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> width = <span class="number">3</span>;</span><br><span class="line">  <span class="comment">// the actual image data, in bytes</span></span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">bytes</span> data = <span class="number">4</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> label = <span class="number">5</span>;</span><br><span class="line">  <span class="comment">// Optionally, the datum could also hold float data.</span></span><br><span class="line">  <span class="keyword">repeated</span> <span class="built_in">float</span> float_data = <span class="number">6</span>;</span><br><span class="line">  <span class="comment">// If true data contains an encoded image that need to be decoded</span></span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">bool</span> encoded = <span class="number">7</span> [default = <span class="literal">false</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>因为提取的特征向量是实数，所以我们从<code>float_data</code>属性中获取数据。<code>repeated</code>类型的<code>float_data</code>在Python中作为一个<code>list</code>处理，所以可以用列表推导式(list comprehension)进行操作。数据的输出格式根据实际需要定义就好，关键是能获取到原始数据。这里我们把每个向量转换成一个字符串，相邻两维之间用空格分隔。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#把float_data中的所有项转换成字符串，以空格分隔连接起来</span></span><br><span class="line">data_str = <span class="string">' '</span>.join([str(dim) <span class="keyword">for</span> dim <span class="keyword">in</span> datum.float_data]) + <span class="string">"\n"</span></span><br></pre></td></tr></table></figure>
+<h1 id="注意事项">注意事项</h1><ul>
+<li>提取特征时，网络运行在Test模式下<ul>
+<li>Dropout层在Test模式下不起作用，不必担心dropout影响结果</li>
+<li>Train和Test的参数写在同一个Prototxt里的时候，改参数的时候注意不要改错地方(比如有两个DataLayer的情况下)</li>
+</ul>
+</li>
+<li>减去均值图像<ul>
+<li>提取特征时，输入的图像要减去均值</li>
+<li>应该减去训练数据集的均值</li>
+</ul>
+</li>
+<li>提取哪一层<ul>
+<li>不要提取Softmax网络的最后一层(如AlexNet的fc8)，因为最后一层已经是分类任务的输出，作为特征的可推广性不够好</li>
+</ul>
+</li>
+</ul>
 
       
     </div>
 
     <div class="post-footer">
       
-        <div class="post-tags">
-          
-            <a href="/tags/caffe/"> #caffe </a>
-          
-            <a href="/tags/lmdb/"> #lmdb </a>
-          
-        </div>
-      
 
       
         <div class="post-nav">
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2015/05/28/用Caffe提取深度特征/">用Caffe提取深度特征</a>
-            
           </div>
 
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2015/05/19/论文阅读-《Language-Models-for-Image-Captioning-The-Quirks-and-What-Works》/">论文阅读:《Language Models for Image Captioning: The Quirks and What Works》</a>
+              <a href="/2015/05/25/Caffe中LMDB的使用/">Caffe中LMDB的使用</a>
             
           </div>
         </div>
@@ -212,8 +211,8 @@
     
       <div class="comments" id="comments">
         
-          <div class="ds-thread" data-thread-key="2015/05/25/Caffe中LMDB的使用/"
-               data-title="Caffe中LMDB的使用" data-url="http://rayz0620.github.io/2015/05/25/Caffe中LMDB的使用/">
+          <div class="ds-thread" data-thread-key="2015/05/28/用Caffe提取深度特征/"
+               data-title="用Caffe提取深度特征" data-url="http://rayz0620.github.io/2015/05/28/用Caffe提取深度特征/">
           </div>
         
       </div>
@@ -308,7 +307,7 @@
           <div class="post-toc">
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#LMDB"><span class="nav-number">1.</span> <span class="nav-text">LMDB</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Caffe中的LMDB数据"><span class="nav-number">2.</span> <span class="nav-text">Caffe中的LMDB数据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Datum数据结构"><span class="nav-number">2.1.</span> <span class="nav-text">Datum数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Caffe中读写LMDB的代码"><span class="nav-number">2.2.</span> <span class="nav-text">Caffe中读写LMDB的代码</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#生成数据集"><span class="nav-number">2.2.1.</span> <span class="nav-text">生成数据集</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读取数据集"><span class="nav-number">2.2.2.</span> <span class="nav-text">读取数据集</span></a></li></ol></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#准备工作"><span class="nav-number">1.</span> <span class="nav-text">准备工作</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#提取特征"><span class="nav-number">2.</span> <span class="nav-text">提取特征</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#读取和转换"><span class="nav-number">3.</span> <span class="nav-text">读取和转换</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#注意事项"><span class="nav-number">4.</span> <span class="nav-text">注意事项</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator"></div>
