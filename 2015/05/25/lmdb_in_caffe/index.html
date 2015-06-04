@@ -20,7 +20,7 @@
 
 
 
-  <meta name="keywords" content="Hexo,next" />
+  <meta name="keywords" content="caffe,lmdb," />
 
 
 
@@ -31,7 +31,7 @@
 
 
 
-  <title> 深度信仰对决：TitanX和TeslaK40c对阵Caffe深度学习 // RayZ Working Soft </title>
+  <title> Caffe中LMDB的使用 // RayZ Working Soft </title>
 </head>
 
 <body>
@@ -103,7 +103,7 @@
           
           
             
-              深度信仰对决：TitanX和TeslaK40c对阵Caffe深度学习
+              Caffe中LMDB的使用
             
           
         </h1>
@@ -111,17 +111,28 @@
 
       <div class="post-meta">
         <span class="post-time">
-          发表于 2015-06-03
+          发表于 2015-05-25
         </span>
 
+        
+          <span class="post-category">
+            &nbsp; | &nbsp; 分类于
+            
+              <a href="/categories/academic/">academic</a>
+
+              
+              
+
+            
+          </span>
         
 
         
           
             <span class="post-comments-count">
             &nbsp; | &nbsp;
-            <a href="/2015/06/03/TitanX和TeslaK40c对阵Caffe深度学习/#comments" >
-              <span class="post-comments-count ds-thread-count" data-thread-key="2015/06/03/TitanX和TeslaK40c对阵Caffe深度学习/"></span>
+            <a href="/2015/05/25/lmdb_in_caffe/#comments" >
+              <span class="post-comments-count ds-thread-count" data-thread-key="2015/05/25/lmdb_in_caffe/"></span>
             </a>
           </span>
           
@@ -135,195 +146,57 @@
       
 
       
-        <p>之前通过NVIDIA的学术信仰计划申请到了一块K40c，最近实验室又购入一块Titan X。这两块卡分别是Kepler和Maxwell两代核心的顶级产品，难得这样的两块卡都在我手上，那就趁此机会评测一下这两块卡在深度学习任务上的表现吧。</p>
-<h1 id="评测产品">评测产品</h1><h2 id="Tesla_K40c">Tesla K40c</h2><p>Tesla K40c是Tesla系列目前最强的单芯片产品。Tesla系列是NV专为大规模并行运算推出的GPU产品。核心基本上和GeForce系列相同，最大的区别在于Tesla卡不提供显示输出接口，只能用作计算。Tesla核心拥有更强的双精度浮点性能（GeForce的双精度性能被限制），配备更大容量的显存，以及支持ECC校验的显存。</p>
-<p>Tesla K系列采用Kepler架构，有K80，K40，K20和K10四个型号，分别对应一款GeForce游戏卡。K80是单卡双GK210芯，对应Titan Z；K40是单GK110B，对应Titan Black；K20X和K20分别是完整和缩减的GK110，对应GTX780ti和GTX780；K10是双GK104，对应的是GTX770（虽然并没有双GTX770的产品）。K10作为低端产品，浮点性能也是受到限制的，只有单精度的20/1.</p>
-<p><img src="/img/tesla_titan/tesla_k_spec.png" alt=""></p>
-<p>K40c有12G显存，2880个CUDA运算核心，相当于显存加倍，频率略降低的Titan Black。c型主要面向工作站，采用了单风扇涡轮散热器。还有频率更低，全被动散热的K40m，主要为服务器环境设计。</p>
-<p>由于Tesla没有显示接口，必须搭配集成显卡或者另一个带显示接口的独立显卡使用。在Linux环境下，N卡和Intel集成显卡混用会遇到驱动程序上的混乱，最好的解决方案是另买一块低端的N卡做显示用。</p>
-<h2 id="GeForce_Titan_X">GeForce Titan X</h2><p>GeForce Titan X是目前GeForce系列的最强产品，其使用的GM200 GPU也是NVIDIA所有产品线中最强的一款。采用Maxwell架构的Tesla产品还未发布，倒是专业图形渲染卡Quadro推出了采用该核心的Quadro M6000。</p>
-<p><img src="/img/tesla_titan/titan_x_spec.png" alt=""></p>
-<p>Titan X拥有史上数量最多的3072个CUDA核心以及GeForce史上最多的12G显存。考虑Maxwell架构的每个CUDA核心性能都强于Kepler，Titan X的运算性能比K40强是板上钉钉的了。那么问题来了，有这么好的GeForce，NV还怎么在Tesla上靠卖显存赚钱呢？答案就是，Titan X限制了双精度浮点运算性能，不像Titan Black那样保留完整的性能。</p>
-<p>幸好，Caffe深度学习框架跑的全是单精度，并不受“GeForce的诅咒”的影响。售价不到一万的Titan X，以及售价不到5000的980ti，是目前跑深度学习性价比最高的GPU产品。</p>
-<h1 id="评测环境">评测环境</h1><h2 id="硬件配置">硬件配置</h2><p>评测用的是我在实验室的台式机，CPU配置不算高，可能有点配不上K40和Titan Black这个级别的GPU。除了被评测的高性能GPU以外还插了一块GT630用来显示。虽然还有一套i7 3960X + X79的组合，不过现在还处于裸板状态，没法用。所以就将就一下吧。具体配置如下：</p>
-<ul>
-<li>CPU: Intel i5 3470</li>
-<li>内存: DDR3 1600 24G(8G*3)</li>
-<li>主板: Gigabyte B85</li>
-<li>硬盘: WD 500G蓝盘</li>
-<li>副显卡: GT630</li>
-</ul>
-<h2 id="系统和软件">系统和软件</h2><ul>
-<li>操作系统: Ubuntu 14.04.2 x64</li>
-<li>N卡驱动: 346.72</li>
-<li>CUDA: 7.0</li>
-<li>CPU数学运算库: Intel MKL 2015 update 1</li>
-<li>CuDNN: 无</li>
-</ul>
-<h2 id="Caffe配置">Caffe配置</h2><p>评测的网络使用<a href="http://caffe.berkeleyvision.org/model_zoo.html" target="_blank" rel="external">bvlc_reference_caffenet</a>，经典的AlexNet的稍微改动版，去掉了最顶的全连接层fc8.</p>
-<p>数据集方面，使用NUS-WIDE数据集的训练集的一个子集，共117398张图像。图像都转换成256*256的大小，以适应网络输入。</p>
-<p>评测通过Caffe提供的<code>caffe.bin</code>的<code>time</code>模式进行进行。这个工具能够测量每一层的前向/后向所消耗的时间。网络的batch_size设为500，运行1000个迭代，计算平均结果。</p>
-<h1 id="评测结果">评测结果</h1><h1 id="基本性能测试">基本性能测试</h1><p>使用<code>caffe.bin</code>程序运行，得到各层的平均耗时(forward和backward加在一起了)和总的平均耗时，单位是毫秒：</p>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">Layer</th>
-<th style="text-align:center">TitanX</th>
-<th style="text-align:center">K40c</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">data</td>
-<td style="text-align:center">79.178</td>
-<td style="text-align:center">91.849</td>
-</tr>
-<tr>
-<td style="text-align:center">conv1</td>
-<td style="text-align:center">252.166</td>
-<td style="text-align:center">470.912</td>
-</tr>
-<tr>
-<td style="text-align:center">relu1</td>
-<td style="text-align:center">4.424</td>
-<td style="text-align:center">6.786</td>
-</tr>
-<tr>
-<td style="text-align:center">pool1</td>
-<td style="text-align:center">5.336</td>
-<td style="text-align:center">10.329</td>
-</tr>
-<tr>
-<td style="text-align:center">norm1</td>
-<td style="text-align:center">10.469</td>
-<td style="text-align:center">18.709</td>
-</tr>
-<tr>
-<td style="text-align:center">conv2</td>
-<td style="text-align:center">316.159</td>
-<td style="text-align:center">503.63</td>
-</tr>
-<tr>
-<td style="text-align:center">relu2</td>
-<td style="text-align:center">2.851</td>
-<td style="text-align:center">4.366</td>
-</tr>
-<tr>
-<td style="text-align:center">pool2</td>
-<td style="text-align:center">3.462</td>
-<td style="text-align:center">7.394</td>
-</tr>
-<tr>
-<td style="text-align:center">norm2</td>
-<td style="text-align:center">7.724</td>
-<td style="text-align:center">13.850</td>
-</tr>
-<tr>
-<td style="text-align:center">conv3</td>
-<td style="text-align:center">173.201</td>
-<td style="text-align:center">352.620</td>
-</tr>
-<tr>
-<td style="text-align:center">relu3</td>
-<td style="text-align:center">1.003</td>
-<td style="text-align:center">1.531</td>
-</tr>
-<tr>
-<td style="text-align:center">conv4</td>
-<td style="text-align:center">203.265</td>
-<td style="text-align:center">359.461</td>
-</tr>
-<tr>
-<td style="text-align:center">relu4</td>
-<td style="text-align:center">1.002</td>
-<td style="text-align:center">1.532</td>
-</tr>
-<tr>
-<td style="text-align:center">conv5</td>
-<td style="text-align:center">176.194</td>
-<td style="text-align:center">288.782</td>
-</tr>
-<tr>
-<td style="text-align:center">pool5</td>
-<td style="text-align:center">0.851</td>
-<td style="text-align:center">1.735</td>
-</tr>
-<tr>
-<td style="text-align:center">fc6</td>
-<td style="text-align:center">28.821</td>
-<td style="text-align:center">31.816</td>
-</tr>
-<tr>
-<td style="text-align:center">relu6</td>
-<td style="text-align:center">0.075</td>
-<td style="text-align:center">0.106</td>
-</tr>
-<tr>
-<td style="text-align:center">drop6</td>
-<td style="text-align:center">0.157</td>
-<td style="text-align:center">0.261</td>
-</tr>
-<tr>
-<td style="text-align:center">fc7</td>
-<td style="text-align:center">12.783</td>
-<td style="text-align:center">13.998</td>
-</tr>
-<tr>
-<td style="text-align:center">relu7</td>
-<td style="text-align:center">0.072</td>
-<td style="text-align:center">0.106</td>
-</tr>
-<tr>
-<td style="text-align:center"><strong>Total</strong></td>
-<td style="text-align:center">1279.8</td>
-<td style="text-align:center">2172.7</td>
-</tr>
-</tbody>
-</table>
-<p>简单来说，Titan X的速度是K40c的<strong>1.7倍</strong>。零售价999美元，8000多人民币的Titan X，可以跑出比售价近万美元的K40c高出70%的性能，并且拥有和K40c同样容量的显存，性价比实在是高。</p>
-<h1 id="LMDB_vs_原始图像">LMDB vs 原始图像</h1><p>在往Caffe里输入图像数据时，主要用的是<code>DataLayer</code> + LMDB数据，以及<code>ImageDataLayer</code> + 原始图像这两种组合。那么这两种输入数据的方式的性能如何呢？我也顺便做了一下对比实验，记录两种组合下<code>data</code>层的耗时。网络结构和上一个实验相同，LMDB存的是无压缩图像数据，原始图像是PNG格式。结果的单位同样是毫秒。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align:center"></th>
-<th style="text-align:center">TitanX</th>
-<th style="text-align:center">K40c</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">LMDB</td>
-<td style="text-align:center">79.118</td>
-<td style="text-align:center">91.849</td>
-</tr>
-<tr>
-<td style="text-align:center">原始图像</td>
-<td style="text-align:center">502.865</td>
-<td style="text-align:center">602.636</td>
-</tr>
-</tbody>
-</table>
-<p>结果说明，同一张卡上，读取原始图像的耗时是读LMDB的6.3到6.6倍。读取原始图像时，每张图像都要打开一个文件，文件系统和磁盘寻道会消耗较多的时间。LMDB所有数据放在单个文件中，通过内存映射方式读写，寻道开销会少一些。原始图像是压缩编码为PNG格式的，读取时需要解压缩，需要耗些时间。LMDB里存放的是无压缩图像，虽然要用Protobuf反序列化，但是应该比解压PNG快(这个实在是没有时间做实验研究)。</p>
-<p>还有就是缓存问题。文件系统和内存映射都会把磁盘数据缓存到内存。LMDB的内存映射视作分配出去的虚拟内存，读入和移出内存按照虚拟内存的逻辑进行管理。虚拟内存的优先级比文件缓存高。也就是说，内存不够的情况下，系统会优先把文件缓存移出内存，再不够了才把进行虚拟内存换页。也就是说，在内存较小的情况下，LMDB的优势可能更明显。</p>
-<p>Titan X比K40c在两种情况下都快了0.2倍，应该是归功于更高的显存带宽。</p>
-<h1 id="总结">总结</h1><p>总而言之，Titan X拥有大显存和高性能，加上比较良心的价格，绝对是实验室高端机的最佳选择。最近可能还会拿到750ti，到时再评测一下这个高性价比普及型的N卡吧。最后来一张信仰合照。</p>
-<p><img src="/img/tesla_titan/tesla_titan.jpg" alt=""></p>
+        <p>最近做实验，要用Caffe提取CNN特征。官方的<code>extract_feature.bin</code>很好用，但是输出的特征是放在LMDB里的。以前嫌LMDB麻烦，一直都图方便直接用<code>ImageDataLayer</code>来读原始图像。这次绕不过去了，就顺便研究了一下Caffe对LMDB的使用，一些心得写下来和大家分享一下。提取特征的内容下一篇再写。</p>
+<p>Caffe中DataLayer默认的数据格式是LMDB。许多example中提供的输入数据是LMDB格式。使用extract_features.bin提取特征时支持的输出格式之一也是LMDB。LMDB在Caffe的IO功能中有相当重要的地位。因此，搞明白如何存取Caffe的LMDB数据，对于我们使用Caffe是很有帮助的。</p>
+<h2 id="LMDB">LMDB</h2><p>Caffe使用LMDB来存放训练/测试用的数据集，以及使用网络提取出的feature（为了方便，以下还是统称数据集）。数据集的结构很简单，就是大量的矩阵/向量数据平铺开来。数据之间没有什么关联，数据内没有复杂的对象结构，就是向量和矩阵。既然数据并不复杂，Caffe就选择了LMDB这个简单的数据库来存放数据。</p>
+<p>LMDB的全称是<strong>Lightning Memory-Mapped Database</strong>，闪电般的内存映射数据库。它文件结构简单，一个文件夹，里面一个数据文件，一个锁文件。数据随意复制，随意传输。它的访问简单，不需要运行单独的数据库管理进程，只要在访问数据的代码里引用LMDB库，访问时给文件路径即可。</p>
+<p>图像数据集归根究底从图像文件而来。既然有ImageDataLayer可以直接读取图像文件，为什么还要用数据库来放数据集，增加读写的麻烦呢？我认为，Caffe引入数据库存放数据集，是为了减少IO开销。读取大量小文件的开销是非常大的，尤其是在机械硬盘上。LMDB的整个数据库放在一个文件里，避免了文件系统寻址的开销。LMDB使用内存映射的方式访问文件，使得文件内寻址的开销非常小，使用指针运算就能实现。数据库单文件还能减少数据集复制/传输过程的开销。一个几万，几十万文件的数据集，不管是直接复制，还是打包再解包，过程都无比漫长而痛苦。LMDB数据库只有一个文件，你的介质有多块，就能复制多快，不会因为文件多而慢如蜗牛。</p>
+<h2 id="Caffe中的LMDB数据">Caffe中的LMDB数据</h2><p>接下来要介绍Caffe是如何使用LMDB存放数据的。<br>Caffe中的LMDB数据大约有两类：一类是输入<code>DataLayer</code>的训练/测试数据集；另一类则是<code>extract_feature</code>输出的特征数据。</p>
+<h3 id="Datum数据结构">Datum数据结构</h3><p>首先需要注意的是，Caffe并不是把向量和矩阵直接放进数据库的，而是将数据通过<a href="https://github.com/BVLC/caffe/blob/master/src/caffe/proto/caffe.proto" target="_blank" rel="external">caffe.proto</a>里定义的一个<code>datum</code>类来封装。数据库里放的是一个个的<code>datum</code>序列化成的字符串。Datum的定义摘录如下：<br><figure class="highlight protobuf"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">message</span> <span class="title">Datum</span> </span>&#123;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> channels = <span class="number">1</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> height = <span class="number">2</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> width = <span class="number">3</span>;</span><br><span class="line">  <span class="comment">// the actual image data, in bytes</span></span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">bytes</span> data = <span class="number">4</span>;</span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">int32</span> label = <span class="number">5</span>;</span><br><span class="line">  <span class="comment">// Optionally, the datum could also hold float data.</span></span><br><span class="line">  <span class="keyword">repeated</span> <span class="built_in">float</span> float_data = <span class="number">6</span>;</span><br><span class="line">  <span class="comment">// If true data contains an encoded image that need to be decoded</span></span><br><span class="line">  <span class="keyword">optional</span> <span class="built_in">bool</span> encoded = <span class="number">7</span> [default = <span class="literal">false</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>一个Datum有三个维度，<code>channels</code>, <code>height</code>,和<code>width</code>，可以看做是少了num维度的<code>Blob</code>。存放数据的地方有两个：<code>byte_data</code>和<code>float_data</code>，分别存放整数型和浮点型数据。图像数据一般是整形，放在<code>byte_data</code>里，特征向量一般是浮点型，放在<code>float_data</code>里。<code>label</code>存放数据的类别标签，是整数型。<code>encoded</code>标识数据是否需要被解码（里面有可能放的是JPEG或者PNG之类经过编码的数据）。</p>
+<p>Datum这个数据结构将数据和标签封装在一起，兼容整形和浮点型数据。经过Protobuf编译后，可以在Python和C++中都提供高效的访问。同时Protubuf还为它提供了序列化与反序列化的功能。存放进LMDB的就是<code>Datum</code>序列化生成的字符串。</p>
+<h3 id="Caffe中读写LMDB的代码">Caffe中读写LMDB的代码</h3><p>要想知道Caffe是如何使用LMDB的，最好的方法当然是去看Caffe的代码。Caffe中关于LMDB的代码有三类：生成数据集、读取数据集、生成特征向量。接下来就分别针对三者进行分析。</p>
+<h4 id="生成数据集">生成数据集</h4><p>生成数据集的代码在examples，随数据集提供，比如<a href="https://github.com/BVLC/caffe/blob/master/examples/mnist/convert_mnist_data.cpp" target="_blank" rel="external">MNIST</a>。</p>
+<p>首先，创建访问LMDB所需的一些变量：<br><figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">MDB_env <span class="keyword">*</span>mdb_env;</span><br><span class="line">MDB_dbi mdb_dbi;</span><br><span class="line">MDB_val mdb_key, mdb_data;</span><br><span class="line">MDB_txn <span class="keyword">*</span>mdb_txn;</span><br><span class="line">...</span><br></pre></td></tr></table></figure></p>
+<p><code>mdb_env</code>是整个数据库环境的句柄，<code>mdb_dbi</code>是环境中一个数据库的句柄，<code>mdb_key</code>和<code>mdb_data</code>用来存放向数据库中输入数据的“值”。<code>mdb_txn</code>是数据库事物操作的句柄，”txn”是”transaction”的缩写。</p>
+<p>然后，创建数据库环境，创建并打开数据库：<br><figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (db_backend <span class="subst">==</span> <span class="string">"lmdb"</span>) &#123;  <span class="comment">// lmdb</span></span><br><span class="line">  <span class="keyword">LOG</span>(INFO) <span class="subst">&lt;&lt;</span> <span class="string">"Opening lmdb "</span> <span class="subst">&lt;&lt;</span> db_path;</span><br><span class="line">  CHECK_EQ(mkdir(db_path, <span class="number">0744</span>), <span class="number">0</span>)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mkdir "</span> <span class="subst">&lt;&lt;</span> db_path <span class="subst">&lt;&lt;</span> <span class="string">"failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_env_create(<span class="subst">&amp;</span>mdb_env), MDB_SUCCESS) <span class="subst">&lt;&lt;</span> <span class="string">"mdb_env_create failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_env_set_mapsize(mdb_env, <span class="number">1099511627776</span>), MDB_SUCCESS)  <span class="comment">// 1TB</span></span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_env_set_mapsize failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_env_open(mdb_env, db_path, <span class="number">0</span>, <span class="number">0664</span>), MDB_SUCCESS)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_env_open failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_txn_begin(mdb_env, <span class="built_in">NULL</span>, <span class="number">0</span>, <span class="subst">&amp;</span>mdb_txn), MDB_SUCCESS)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_txn_begin failed"</span>;</span><br><span class="line">  CHECK_EQ(mdb_open(mdb_txn, <span class="built_in">NULL</span>, <span class="number">0</span>, <span class="subst">&amp;</span>mdb_dbi), MDB_SUCCESS)</span><br><span class="line">      <span class="subst">&lt;&lt;</span> <span class="string">"mdb_open failed. Does the lmdb already exist? "</span>;</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="keyword">LOG</span>(FATAL) <span class="subst">&lt;&lt;</span> <span class="string">"Unknown db backend "</span> <span class="subst">&lt;&lt;</span> db_backend;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>第3行代码为数据库创建文件夹，如果文件夹已经存在，程序会报错退出。也就是说，程序不会覆盖已有的数据库。已有的数据库如果不要了，需要手动删除。第13行处创建并打开了一个数据库。需要注意的是，LMDB的一个环境中是可以有多个数据库的，数据库之间以名字区分。<code>mdb_open()</code>的第二个参数实际上就是数据库的名称(<code>char *</code>)。当一个环境中只有一个数据库的时候，这个参数可以给<code>NULL</code>。</p>
+<p>最后，为每一个图像创建<code>Datum</code>对象，向对象内写入数据，然后将其序列化成字符串，将字符串放入数据库中：<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">Datum datum;</span><br><span class="line">datum.set_channels(<span class="number">1</span>);</span><br><span class="line">datum.set_height(rows);</span><br><span class="line">datum.set_width(cols);</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> item_id = <span class="number">0</span>; item_id &lt; num_items; ++item_id) &#123;</span><br><span class="line">  image_file.read(pixels, rows * cols);</span><br><span class="line">  label_file.read(&amp;label, <span class="number">1</span>);</span><br><span class="line">  datum.set_data(pixels, rows*cols);</span><br><span class="line">  datum.set_label(label);</span><br><span class="line">  <span class="built_in">snprintf</span>(key_cstr, kMaxKeyLength, <span class="string">"%08d"</span>, item_id);</span><br><span class="line">  datum.SerializeToString(&amp;value);</span><br><span class="line">  <span class="function"><span class="built_in">string</span> <span class="title">keystr</span><span class="params">(key_cstr)</span></span>;</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Put in db</span></span><br><span class="line">  <span class="keyword">if</span> (db_backend == <span class="string">"lmdb"</span>) &#123;  <span class="comment">// lmdb</span></span><br><span class="line">    mdb_data.mv_size = value.size();</span><br><span class="line">    mdb_data.mv_data = <span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">void</span>*&gt;(&amp;value[<span class="number">0</span>]);</span><br><span class="line">    mdb_key.mv_size = keystr.size();</span><br><span class="line">    mdb_key.mv_data = <span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">void</span>*&gt;(&amp;keystr[<span class="number">0</span>]);</span><br><span class="line">    CHECK_EQ(mdb_put(mdb_txn, mdb_dbi, &amp;mdb_key, &amp;mdb_data, <span class="number">0</span>), MDB_SUCCESS)</span><br><span class="line">        &lt;&lt; <span class="string">"mdb_put failed"</span>;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    LOG(FATAL) &lt;&lt; <span class="string">"Unknown db backend "</span> &lt;&lt; db_backend;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">if</span> (++count % <span class="number">1000</span> == <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// Commit txn</span></span><br><span class="line">    <span class="keyword">if</span> (db_backend == <span class="string">"lmdb"</span>) &#123;  <span class="comment">// lmdb</span></span><br><span class="line">      CHECK_EQ(mdb_txn_commit(mdb_txn), MDB_SUCCESS)</span><br><span class="line">          &lt;&lt; <span class="string">"mdb_txn_commit failed"</span>;</span><br><span class="line">      CHECK_EQ(mdb_txn_begin(mdb_env, NULL, <span class="number">0</span>, &amp;mdb_txn), MDB_SUCCESS)</span><br><span class="line">          &lt;&lt; <span class="string">"mdb_txn_begin failed"</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      LOG(FATAL) &lt;&lt; <span class="string">"Unknown db backend "</span> &lt;&lt; db_backend;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>放入数据的Key是图像的编号，前面补0至8位。需要注意的是18至21行，<code>MDB_val</code>类型的<code>mdb_data</code>和<code>mdb_key</code>中存放的是数据来源的指针，以及数据的长度。第20行的<code>mdb_put()</code>函数将数据存入数据库。每隔1000个图像commit一次数据库。只有commit之后，数据才真正写入磁盘。</p>
+<h4 id="读取数据集">读取数据集</h4><p>Caffe中读取LMDB数据集的代码是<a href="https://github.com/BVLC/caffe/blob/master/src/caffe/layers/data_layer.cpp" target="_blank" rel="external"><code>DataLayer</code></a>，用在网络的最下层，提供数据。<code>DataLayer</code>采用顺序遍历的方式读取数据，不支持打乱数据顺序，只能随机跳过前若干个数据。</p>
+<p>首先，在<code>DataLayer</code>的<code>DataLayerSetUp</code>方法中，打开数据库，并获取迭代器<code>cursor_</code>：<br><figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">db_</span><span class="class">.reset</span>(<span class="rule"><span class="attribute">db</span>:<span class="value">:<span class="function">GetDB</span>(this-&gt;layer_param_.<span class="function">data_param</span>().<span class="function">backend</span>()))</span></span>;</span><br><span class="line"><span class="tag">db_-</span>&gt;<span class="tag">Open</span>(<span class="tag">this-</span>&gt;<span class="tag">layer_param_</span><span class="class">.data_param</span>()<span class="class">.source</span>(), <span class="rule"><span class="attribute">db</span>:<span class="value">:READ)</span></span>;</span><br><span class="line"><span class="tag">cursor_</span><span class="class">.reset</span>(<span class="tag">db_-</span>&gt;<span class="tag">NewCursor</span>());</span><br></pre></td></tr></table></figure></p>
+<p>然后，在每一次的数据预取时，<code>InternalThreadEntry()</code>方法中，从数据库中读取字符串，反序列化为Datum对象，再从Datum对象中取出数据：</p>
+<figure class="highlight ocaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">Datum</span> datum;</span><br><span class="line">datum.<span class="type">ParseFromString</span>(cursor_-&gt;<span class="keyword">value</span><span class="literal">()</span>);</span><br></pre></td></tr></table></figure>
+<p>其中，<code>cursor_-&gt;value()</code>获取序列化后的字符串。<code>datum.ParseFromString()</code>方法对字符串进行反序列化。</p>
+<p>最后，要将<code>cursor_</code>向前推进：<br><figure class="highlight ocaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cursor_-&gt;<span class="type">Next</span><span class="literal">()</span>;</span><br><span class="line"><span class="keyword">if</span> (!cursor_-&gt;valid<span class="literal">()</span>) &#123;</span><br><span class="line">  <span class="type">DLOG</span>(<span class="type">INFO</span>) &lt;&lt; <span class="string">"Restarting data prefetching from start."</span></span><br><span class="line">      cursor_-&gt;<span class="type">SeekToFirst</span><span class="literal">()</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>如果<code>cursor-&gt;valid()</code>返回false，说明数据库已经遍历到头，这时需要将<code>cursor_</code>重置回数据库开头。</p>
+<p>不支持样本随机排序应该是<code>DataLayer</code>的致命弱点。如果数据库的key能够统一，其实可以通过对key随机枚举的方式实现。</p>
 
       
     </div>
 
     <div class="post-footer">
       
+        <div class="post-tags">
+          
+            <a href="/tags/caffe/"> #caffe </a>
+          
+            <a href="/tags/lmdb/"> #lmdb </a>
+          
+        </div>
+      
 
       
         <div class="post-nav">
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2015/05/25/Caffe中LMDB的使用/">Caffe中LMDB的使用</a>
+            
           </div>
 
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2015/05/28/用Caffe提取深度特征/">用Caffe提取深度特征</a>
+              <a href="/2015/05/19/Language-Models-for-Image-Captioning-The-Quirks-and-What-Works/">论文阅读:《Language Models for Image Captioning: The Quirks and What Works》</a>
             
           </div>
         </div>
@@ -339,8 +212,8 @@
     
       <div class="comments" id="comments">
         
-          <div class="ds-thread" data-thread-key="2015/06/03/TitanX和TeslaK40c对阵Caffe深度学习/"
-               data-title="深度信仰对决：TitanX和TeslaK40c对阵Caffe深度学习" data-url="http://rayz0620.github.io/2015/06/03/TitanX和TeslaK40c对阵Caffe深度学习/">
+          <div class="ds-thread" data-thread-key="2015/05/25/lmdb_in_caffe/"
+               data-title="Caffe中LMDB的使用" data-url="http://rayz0620.github.io/2015/05/25/lmdb_in_caffe/">
           </div>
         
       </div>
@@ -387,7 +260,7 @@
         <div class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">6</span>
+              <span class="site-state-item-count">9</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -435,7 +308,7 @@
           <div class="post-toc">
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#评测产品"><span class="nav-number">1.</span> <span class="nav-text">评测产品</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Tesla_K40c"><span class="nav-number">1.1.</span> <span class="nav-text">Tesla K40c</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GeForce_Titan_X"><span class="nav-number">1.2.</span> <span class="nav-text">GeForce Titan X</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#评测环境"><span class="nav-number">2.</span> <span class="nav-text">评测环境</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#硬件配置"><span class="nav-number">2.1.</span> <span class="nav-text">硬件配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#系统和软件"><span class="nav-number">2.2.</span> <span class="nav-text">系统和软件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Caffe配置"><span class="nav-number">2.3.</span> <span class="nav-text">Caffe配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#评测结果"><span class="nav-number">3.</span> <span class="nav-text">评测结果</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#基本性能测试"><span class="nav-number">4.</span> <span class="nav-text">基本性能测试</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#LMDB_vs_原始图像"><span class="nav-number">5.</span> <span class="nav-text">LMDB vs 原始图像</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#LMDB"><span class="nav-number">1.</span> <span class="nav-text">LMDB</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Caffe中的LMDB数据"><span class="nav-number">2.</span> <span class="nav-text">Caffe中的LMDB数据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Datum数据结构"><span class="nav-number">2.1.</span> <span class="nav-text">Datum数据结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Caffe中读写LMDB的代码"><span class="nav-number">2.2.</span> <span class="nav-text">Caffe中读写LMDB的代码</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#生成数据集"><span class="nav-number">2.2.1.</span> <span class="nav-text">生成数据集</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#读取数据集"><span class="nav-number">2.2.2.</span> <span class="nav-text">读取数据集</span></a></li></ol></li></ol></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator"></div>

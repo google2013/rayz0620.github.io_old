@@ -20,7 +20,7 @@
 
 
 
-  <meta name="keywords" content="academic, life," />
+  <meta name="keywords" content="Hexo,next" />
 
 
 
@@ -31,7 +31,7 @@
 
 
 
-  <title> HelloWorld // RayZ Working Soft </title>
+  <title> 深度信仰对决：TitanX和TeslaK40c对阵Caffe深度学习 // RayZ Working Soft </title>
 </head>
 
 <body>
@@ -103,7 +103,7 @@
           
           
             
-              HelloWorld
+              深度信仰对决：TitanX和TeslaK40c对阵Caffe深度学习
             
           
         </h1>
@@ -111,36 +111,17 @@
 
       <div class="post-meta">
         <span class="post-time">
-          发表于 2015-04-28
+          发表于 2015-06-03
         </span>
 
-        
-          <span class="post-category">
-            &nbsp; | &nbsp; 分类于
-            
-              <a href="/categories/academic/">academic</a>
-
-              
-              
-                ， 
-              
-
-            
-              <a href="/categories/academic/life/">life</a>
-
-              
-              
-
-            
-          </span>
         
 
         
           
             <span class="post-comments-count">
             &nbsp; | &nbsp;
-            <a href="/2015/04/28/HelloWorld/#comments" >
-              <span class="post-comments-count ds-thread-count" data-thread-key="2015/04/28/HelloWorld/"></span>
+            <a href="/2015/06/03/titanx_vs_tesla_k40/#comments" >
+              <span class="post-comments-count ds-thread-count" data-thread-key="2015/06/03/titanx_vs_tesla_k40/"></span>
             </a>
           </span>
           
@@ -154,29 +135,195 @@
       
 
       
-        <p>Hello, world. Hello, hexo.</p>
+        <p>之前通过NVIDIA的学术信仰计划申请到了一块K40c，最近实验室又购入一块Titan X。这两块卡分别是Kepler和Maxwell两代核心的顶级产品，难得这样的两块卡都在我手上，那就趁此机会评测一下这两块卡在深度学习任务上的表现吧。</p>
+<h1 id="评测产品">评测产品</h1><h2 id="Tesla_K40c">Tesla K40c</h2><p>Tesla K40c是Tesla系列目前最强的单芯片产品。Tesla系列是NV专为大规模并行运算推出的GPU产品。核心基本上和GeForce系列相同，最大的区别在于Tesla卡不提供显示输出接口，只能用作计算。Tesla核心拥有更强的双精度浮点性能（GeForce的双精度性能被限制），配备更大容量的显存，以及支持ECC校验的显存。</p>
+<p>Tesla K系列采用Kepler架构，有K80，K40，K20和K10四个型号，分别对应一款GeForce游戏卡。K80是单卡双GK210芯，对应Titan Z；K40是单GK110B，对应Titan Black；K20X和K20分别是完整和缩减的GK110，对应GTX780ti和GTX780；K10是双GK104，对应的是GTX770（虽然并没有双GTX770的产品）。K10作为低端产品，浮点性能也是受到限制的，只有单精度的20/1.</p>
+<p><img src="/img/tesla_titan/tesla_k_spec.png" alt=""></p>
+<p>K40c有12G显存，2880个CUDA运算核心，相当于显存加倍，频率略降低的Titan Black。c型主要面向工作站，采用了单风扇涡轮散热器。还有频率更低，全被动散热的K40m，主要为服务器环境设计。</p>
+<p>由于Tesla没有显示接口，必须搭配集成显卡或者另一个带显示接口的独立显卡使用。在Linux环境下，N卡和Intel集成显卡混用会遇到驱动程序上的混乱，最好的解决方案是另买一块低端的N卡做显示用。</p>
+<h2 id="GeForce_Titan_X">GeForce Titan X</h2><p>GeForce Titan X是目前GeForce系列的最强产品，其使用的GM200 GPU也是NVIDIA所有产品线中最强的一款。采用Maxwell架构的Tesla产品还未发布，倒是专业图形渲染卡Quadro推出了采用该核心的Quadro M6000。</p>
+<p><img src="/img/tesla_titan/titan_x_spec.png" alt=""></p>
+<p>Titan X拥有史上数量最多的3072个CUDA核心以及GeForce史上最多的12G显存。考虑Maxwell架构的每个CUDA核心性能都强于Kepler，Titan X的运算性能比K40强是板上钉钉的了。那么问题来了，有这么好的GeForce，NV还怎么在Tesla上靠卖显存赚钱呢？答案就是，Titan X限制了双精度浮点运算性能，不像Titan Black那样保留完整的性能。</p>
+<p>幸好，Caffe深度学习框架跑的全是单精度，并不受“GeForce的诅咒”的影响。售价不到一万的Titan X，以及售价不到5000的980ti，是目前跑深度学习性价比最高的GPU产品。</p>
+<h1 id="评测环境">评测环境</h1><h2 id="硬件配置">硬件配置</h2><p>评测用的是我在实验室的台式机，CPU配置不算高，可能有点配不上K40和Titan Black这个级别的GPU。除了被评测的高性能GPU以外还插了一块GT630用来显示。虽然还有一套i7 3960X + X79的组合，不过现在还处于裸板状态，没法用。所以就将就一下吧。具体配置如下：</p>
+<ul>
+<li>CPU: Intel i5 3470</li>
+<li>内存: DDR3 1600 24G(8G*3)</li>
+<li>主板: Gigabyte B85</li>
+<li>硬盘: WD 500G蓝盘</li>
+<li>副显卡: GT630</li>
+</ul>
+<h2 id="系统和软件">系统和软件</h2><ul>
+<li>操作系统: Ubuntu 14.04.2 x64</li>
+<li>N卡驱动: 346.72</li>
+<li>CUDA: 7.0</li>
+<li>CPU数学运算库: Intel MKL 2015 update 1</li>
+<li>CuDNN: 无</li>
+</ul>
+<h2 id="Caffe配置">Caffe配置</h2><p>评测的网络使用<a href="http://caffe.berkeleyvision.org/model_zoo.html" target="_blank" rel="external">bvlc_reference_caffenet</a>，经典的AlexNet的稍微改动版，去掉了最顶的全连接层fc8.</p>
+<p>数据集方面，使用NUS-WIDE数据集的训练集的一个子集，共117398张图像。图像都转换成256*256的大小，以适应网络输入。</p>
+<p>评测通过Caffe提供的<code>caffe.bin</code>的<code>time</code>模式进行进行。这个工具能够测量每一层的前向/后向所消耗的时间。网络的batch_size设为500，运行1000个迭代，计算平均结果。</p>
+<h1 id="评测结果">评测结果</h1><h1 id="基本性能测试">基本性能测试</h1><p>使用<code>caffe.bin</code>程序运行，得到各层的平均耗时(forward和backward加在一起了)和总的平均耗时，单位是毫秒：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">Layer</th>
+<th style="text-align:center">TitanX</th>
+<th style="text-align:center">K40c</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">data</td>
+<td style="text-align:center">79.178</td>
+<td style="text-align:center">91.849</td>
+</tr>
+<tr>
+<td style="text-align:center">conv1</td>
+<td style="text-align:center">252.166</td>
+<td style="text-align:center">470.912</td>
+</tr>
+<tr>
+<td style="text-align:center">relu1</td>
+<td style="text-align:center">4.424</td>
+<td style="text-align:center">6.786</td>
+</tr>
+<tr>
+<td style="text-align:center">pool1</td>
+<td style="text-align:center">5.336</td>
+<td style="text-align:center">10.329</td>
+</tr>
+<tr>
+<td style="text-align:center">norm1</td>
+<td style="text-align:center">10.469</td>
+<td style="text-align:center">18.709</td>
+</tr>
+<tr>
+<td style="text-align:center">conv2</td>
+<td style="text-align:center">316.159</td>
+<td style="text-align:center">503.63</td>
+</tr>
+<tr>
+<td style="text-align:center">relu2</td>
+<td style="text-align:center">2.851</td>
+<td style="text-align:center">4.366</td>
+</tr>
+<tr>
+<td style="text-align:center">pool2</td>
+<td style="text-align:center">3.462</td>
+<td style="text-align:center">7.394</td>
+</tr>
+<tr>
+<td style="text-align:center">norm2</td>
+<td style="text-align:center">7.724</td>
+<td style="text-align:center">13.850</td>
+</tr>
+<tr>
+<td style="text-align:center">conv3</td>
+<td style="text-align:center">173.201</td>
+<td style="text-align:center">352.620</td>
+</tr>
+<tr>
+<td style="text-align:center">relu3</td>
+<td style="text-align:center">1.003</td>
+<td style="text-align:center">1.531</td>
+</tr>
+<tr>
+<td style="text-align:center">conv4</td>
+<td style="text-align:center">203.265</td>
+<td style="text-align:center">359.461</td>
+</tr>
+<tr>
+<td style="text-align:center">relu4</td>
+<td style="text-align:center">1.002</td>
+<td style="text-align:center">1.532</td>
+</tr>
+<tr>
+<td style="text-align:center">conv5</td>
+<td style="text-align:center">176.194</td>
+<td style="text-align:center">288.782</td>
+</tr>
+<tr>
+<td style="text-align:center">pool5</td>
+<td style="text-align:center">0.851</td>
+<td style="text-align:center">1.735</td>
+</tr>
+<tr>
+<td style="text-align:center">fc6</td>
+<td style="text-align:center">28.821</td>
+<td style="text-align:center">31.816</td>
+</tr>
+<tr>
+<td style="text-align:center">relu6</td>
+<td style="text-align:center">0.075</td>
+<td style="text-align:center">0.106</td>
+</tr>
+<tr>
+<td style="text-align:center">drop6</td>
+<td style="text-align:center">0.157</td>
+<td style="text-align:center">0.261</td>
+</tr>
+<tr>
+<td style="text-align:center">fc7</td>
+<td style="text-align:center">12.783</td>
+<td style="text-align:center">13.998</td>
+</tr>
+<tr>
+<td style="text-align:center">relu7</td>
+<td style="text-align:center">0.072</td>
+<td style="text-align:center">0.106</td>
+</tr>
+<tr>
+<td style="text-align:center"><strong>Total</strong></td>
+<td style="text-align:center">1279.8</td>
+<td style="text-align:center">2172.7</td>
+</tr>
+</tbody>
+</table>
+<p>简单来说，Titan X的速度是K40c的<strong>1.7倍</strong>。零售价999美元，8000多人民币的Titan X，可以跑出比售价近万美元的K40c高出70%的性能，并且拥有和K40c同样容量的显存，性价比实在是高。</p>
+<h1 id="LMDB_vs_原始图像">LMDB vs 原始图像</h1><p>在往Caffe里输入图像数据时，主要用的是<code>DataLayer</code> + LMDB数据，以及<code>ImageDataLayer</code> + 原始图像这两种组合。那么这两种输入数据的方式的性能如何呢？我也顺便做了一下对比实验，记录两种组合下<code>data</code>层的耗时。网络结构和上一个实验相同，LMDB存的是无压缩图像数据，原始图像是PNG格式。结果的单位同样是毫秒。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center"></th>
+<th style="text-align:center">TitanX</th>
+<th style="text-align:center">K40c</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">LMDB</td>
+<td style="text-align:center">79.118</td>
+<td style="text-align:center">91.849</td>
+</tr>
+<tr>
+<td style="text-align:center">原始图像</td>
+<td style="text-align:center">502.865</td>
+<td style="text-align:center">602.636</td>
+</tr>
+</tbody>
+</table>
+<p>结果说明，同一张卡上，读取原始图像的耗时是读LMDB的6.3到6.6倍。读取原始图像时，每张图像都要打开一个文件，文件系统和磁盘寻道会消耗较多的时间。LMDB所有数据放在单个文件中，通过内存映射方式读写，寻道开销会少一些。原始图像是压缩编码为PNG格式的，读取时需要解压缩，需要耗些时间。LMDB里存放的是无压缩图像，虽然要用Protobuf反序列化，但是应该比解压PNG快(这个实在是没有时间做实验研究)。</p>
+<p>还有就是缓存问题。文件系统和内存映射都会把磁盘数据缓存到内存。LMDB的内存映射视作分配出去的虚拟内存，读入和移出内存按照虚拟内存的逻辑进行管理。虚拟内存的优先级比文件缓存高。也就是说，内存不够的情况下，系统会优先把文件缓存移出内存，再不够了才把进行虚拟内存换页。也就是说，在内存较小的情况下，LMDB的优势可能更明显。</p>
+<p>Titan X比K40c在两种情况下都快了0.2倍，应该是归功于更高的显存带宽。</p>
+<h1 id="总结">总结</h1><p>总而言之，Titan X拥有大显存和高性能，加上比较良心的价格，绝对是实验室高端机的最佳选择。最近可能还会拿到750ti，到时再评测一下这个高性价比普及型的N卡吧。最后来一张信仰合照。</p>
+<p><img src="/img/tesla_titan/tesla_titan.jpg" alt=""></p>
 
       
     </div>
 
     <div class="post-footer">
       
-        <div class="post-tags">
-          
-            <a href="/tags/academic-life/"> #academic, life </a>
-          
-        </div>
-      
 
       
         <div class="post-nav">
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2015/05/14/rnn_note_1/">RNN学习笔记（1）-从HMM到RNN</a>
-            
           </div>
 
           <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/05/28/用Caffe提取深度特征/">用Caffe提取深度特征</a>
             
           </div>
         </div>
@@ -192,8 +339,8 @@
     
       <div class="comments" id="comments">
         
-          <div class="ds-thread" data-thread-key="2015/04/28/HelloWorld/"
-               data-title="HelloWorld" data-url="http://rayz0620.github.io/2015/04/28/HelloWorld/">
+          <div class="ds-thread" data-thread-key="2015/06/03/titanx_vs_tesla_k40/"
+               data-title="深度信仰对决：TitanX和TeslaK40c对阵Caffe深度学习" data-url="http://rayz0620.github.io/2015/06/03/titanx_vs_tesla_k40/">
           </div>
         
       </div>
@@ -288,7 +435,7 @@
           <div class="post-toc">
             
             
-              <p class="post-toc-empty">此文章未包含目录</p>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#评测产品"><span class="nav-number">1.</span> <span class="nav-text">评测产品</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Tesla_K40c"><span class="nav-number">1.1.</span> <span class="nav-text">Tesla K40c</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GeForce_Titan_X"><span class="nav-number">1.2.</span> <span class="nav-text">GeForce Titan X</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#评测环境"><span class="nav-number">2.</span> <span class="nav-text">评测环境</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#硬件配置"><span class="nav-number">2.1.</span> <span class="nav-text">硬件配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#系统和软件"><span class="nav-number">2.2.</span> <span class="nav-text">系统和软件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Caffe配置"><span class="nav-number">2.3.</span> <span class="nav-text">Caffe配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#评测结果"><span class="nav-number">3.</span> <span class="nav-text">评测结果</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#基本性能测试"><span class="nav-number">4.</span> <span class="nav-text">基本性能测试</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#LMDB_vs_原始图像"><span class="nav-number">5.</span> <span class="nav-text">LMDB vs 原始图像</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#总结"><span class="nav-number">6.</span> <span class="nav-text">总结</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator"></div>
